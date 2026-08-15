@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>Cookie & User-Agent Pro</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    /* 经典护眼滚动条 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #cbe4d1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #9cc4a5;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #7fae8a;
+    }
+
+    body {
+      width: 580px;
+      background: #cce8cf; /* 经典权威豆沙绿底色 (RGB: 204, 232, 207) */
+      color: #173824;
+      padding: 14px 16px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    /* Header Bar */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #b3d6bc;
+    }
+    .main-title {
+      font-size: 14px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: #155734;
+      letter-spacing: 0.2px;
+    }
+    .app-icon-img {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      box-shadow: 0 1px 4px rgba(21, 87, 52, 0.25);
+    }
+    .badge-native {
+      font-size: 10px;
+      background: #256b46;
+      color: #f0fdf4;
+      border: 1px solid #1e5a3a;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .stats-info {
+      font-size: 11px;
+      color: #386047;
+    }
+    .stats-info strong {
+      color: #134e2f;
+    }
+
+    /* Section Containers */
+    .section-box {
+      background: #daf0de;
+      border: 1px solid #b6d9bf;
+      border-radius: 9px;
+      padding: 11px 13px;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(23, 56, 36, 0.06);
+    }
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #134e2f;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* UA & WebRTC Top Row */
+    .ua-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .scope-group {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .radio-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      color: #214d33;
+      font-size: 11px;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    .radio-label:hover {
+      color: #0d381f;
+    }
+    .radio-label input {
+      accent-color: #256b46;
+      cursor: pointer;
+    }
+
+    /* Status Badges */
+    .ua-status-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: #c3e2ca;
+      color: #315c41;
+      border: 1px solid #a8cfb1;
+      font-weight: 500;
+    }
+    .ua-status-badge.active {
+      background: #256b46;
+      color: #ffffff;
+      border: 1px solid #1b5335;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(37, 107, 70, 0.2);
+    }
+
+    /* Controls & Selects */
+    .ua-controls-row, .webrtc-controls-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .select-control {
+      flex: 1;
+      background: #ecf8ee;
+      border: 1px solid #a8cfb1;
+      color: #173824;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 12px;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+    .select-control:focus {
+      border-color: #256b46;
+      box-shadow: 0 0 0 2px rgba(37, 107, 70, 0.18);
+    }
+    .select-control optgroup {
+      background: #daf0de;
+      color: #155734;
+      font-weight: 600;
+    }
+    .select-control option {
+      background: #ecf8ee;
+      color: #173824;
+      font-weight: normal;
+    }
+
+    /* Textarea & Inputs */
+    .ua-input-row {
+      margin-bottom: 8px;
+    }
+    .ua-textarea {
+      width: 100%;
+      height: 46px;
+      background: #ecf8ee;
+      border: 1px solid #a8cfb1;
+      border-radius: 6px;
+      color: #15472b;
+      font-family: "JetBrains Mono", Consolas, Monaco, "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.35;
+      padding: 6px 8px;
+      outline: none;
+      resize: none;
+      transition: all 0.2s ease;
+    }
+    .ua-textarea:focus {
+      border-color: #256b46;
+      box-shadow: 0 0 0 2px rgba(37, 107, 70, 0.18);
+    }
+    .ua-textarea::placeholder {
+      color: #6a9179;
+    }
+
+    .ua-bottom-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      color: #386047;
+      cursor: pointer;
+    }
+    .checkbox-label:hover {
+      color: #173824;
+    }
+    .checkbox-label input {
+      accent-color: #256b46;
+    }
+
+    /* WebRTC Tip Box */
+    .webrtc-tip {
+      font-size: 11px;
+      color: #2e553c;
+      line-height: 1.45;
+      background: #e6f6e8;
+      padding: 7px 9px;
+      border-radius: 6px;
+      border: 1px dashed #a3caa9;
+    }
+
+    /* Saved Rules Panel (Collapsible) */
+    .rules-panel {
+      display: none;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px dashed #a8cfb1;
+    }
+    .rules-panel.show {
+      display: block;
+    }
+    .rules-list {
+      max-height: 100px;
+      overflow-y: auto;
+      background: #ecf8ee;
+      border: 1px solid #b6d9bf;
+      border-radius: 6px;
+      margin-bottom: 6px;
+    }
+    .rule-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 8px;
+      border-bottom: 1px solid #daf0de;
+      font-size: 11px;
+    }
+    .rule-item:last-child {
+      border-bottom: none;
+    }
+    .rule-domain {
+      font-weight: 600;
+      color: #155734;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rule-ua {
+      color: #4a745b;
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .rules-empty {
+      padding: 10px;
+      text-align: center;
+      color: #6a9179;
+      font-size: 11px;
+    }
+
+    /* Export Tabs */
+    .export-tabs {
+      display: flex;
+      gap: 5px;
+      margin-bottom: 8px;
+    }
+    .export-tab {
+      flex: 1;
+      background: #cae6cf;
+      color: #2b553b;
+      border: 1px solid #a8cfb1;
+      padding: 5px 4px;
+      border-radius: 5px;
+      font-size: 11px;
+      cursor: pointer;
+      font-weight: 500;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+    .export-tab:hover {
+      color: #0d381f;
+      background: #b9debf;
+      border-color: #93c09c;
+    }
+    .export-tab.active {
+      background: #256b46;
+      color: #ffffff;
+      border-color: #256b46;
+      font-weight: 700;
+      box-shadow: 0 2px 4px rgba(37, 107, 70, 0.2);
+    }
+
+    /* Code Preview Area */
+    .preview-box {
+      width: 100%;
+      height: 140px;
+      background: #ecf8ee;
+      border: 1px solid #a8cfb1;
+      border-radius: 6px;
+      color: #13472a;
+      font-family: "JetBrains Mono", Consolas, Monaco, "Courier New", monospace;
+      font-size: 11px;
+      line-height: 1.38;
+      padding: 8px 10px;
+      outline: none;
+      resize: none;
+      white-space: pre;
+      margin-bottom: 8px;
+    }
+
+    /* Footer Action Buttons */
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-tip {
+      font-size: 11px;
+      color: #4a745b;
+    }
+    .btn-group {
+      display: flex;
+      gap: 6px;
+    }
+    .btn {
+      padding: 5px 12px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .btn-secondary {
+      background: #c3e2ca;
+      color: #174227;
+      border: 1px solid #a4cca9;
+    }
+    .btn-secondary:hover {
+      background: #b3d9bb;
+      border-color: #92be99;
+      color: #0c2d18;
+    }
+    .btn-primary {
+      background: #256b46;
+      color: #ffffff;
+      font-weight: 600;
+      border: 1px solid #1e5a3a;
+      box-shadow: 0 2px 4px rgba(37, 107, 70, 0.2);
+    }
+    .btn-primary:hover {
+      background: #1b5335;
+      border-color: #144028;
+      box-shadow: 0 3px 6px rgba(27, 83, 53, 0.3);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #9dc4a4;
+      color: #214d33;
+    }
+    .btn-outline:hover {
+      background: #cae6cf;
+      border-color: #256b46;
+      color: #0d381f;
+    }
+    .btn-icon {
+      background: transparent;
+      border: none;
+      color: #dc2626;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .btn-icon:hover {
+      background: rgba(220, 38, 38, 0.12);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <div class="header-bar">
+    <div class="main-title">
+      <img src="icons/icon32.png" class="app-icon-img" alt="App Icon">
+      <span>Cookie & UA/WebRTC Switcher Pro</span>
+      <span class="badge-native">MV3 Native</span>
+    </div>
+    <div class="stats-info" id="statsInfo">读取中...</div>
+  </div>
+
+  <!-- Section 1: User-Agent 切换与持久化 -->
+  <div class="section-box">
+    <div class="ua-top-row">
+      <div class="scope-group">
+        <label class="radio-label">
+          <input type="radio" name="uaScope" value="site" checked>
+          <span>仅本站 (<strong id="currentDomainText">-</strong>)</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="uaScope" value="global">
+          <span>全局所有网站</span>
+        </label>
+      </div>
+      <span class="ua-status-badge" id="activeUaBadge">⚪ 默认浏览器 UA</span>
+    </div>
+
+    <div class="ua-controls-row">
+      <select class="select-control" id="uaPresets">
+        <option value="DEFAULT">🔄 默认/原生 Chrome 浏览器</option>
+        <optgroup label="📱 移动端设备 (iOS / Android)">
+          <option value="IPHONE_15">📱 iPhone 15 Pro (Safari / iOS 17.5)</option>
+          <option value="IPAD_PRO">📱 iPad Pro (Safari / iPadOS 17.5)</option>
+          <option value="ANDROID_PIXEL">📱 Android Google Pixel 8 (Chrome Mobile)</option>
+          <option value="ANDROID_SAMSUNG">📱 Samsung Galaxy S24 (Samsung Browser)</option>
+        </optgroup>
+        <optgroup label="💬 社交应用内置浏览器">
+          <option value="WECHAT_IOS">💬 微信内置浏览器 (iPhone iOS 17)</option>
+          <option value="WECHAT_ANDROID">💬 微信内置浏览器 (Android 14)</option>
+        </optgroup>
+        <optgroup label="💻 桌面端操作系统与浏览器">
+          <option value="MAC_SAFARI">💻 macOS Safari 17 (Desktop)</option>
+          <option value="MAC_CHROME">💻 macOS Chrome 126 (Desktop)</option>
+          <option value="WIN_EDGE">💻 Windows 11 Microsoft Edge 126</option>
+          <option value="WIN_FIREFOX">💻 Windows 11 Mozilla Firefox 127</option>
+          <option value="LINUX_CHROME">💻 Linux Ubuntu Chrome 126</option>
+        </optgroup>
+        <optgroup label="🕷️ 搜索引擎爬虫 (Spider / Bot)">
+          <option value="GOOGLE_BOT">🕷️ Googlebot (谷歌搜索引擎爬虫)</option>
+          <option value="BAIDU_SPIDER">🕷️ Baiduspider (百度搜索引擎爬虫)</option>
+          <option value="BING_BOT">🕷️ Bingbot (必应搜索引擎爬虫)</option>
+        </optgroup>
+        <option value="CUSTOM">✏️ 自定义输入 User-Agent</option>
+      </select>
+      <button class="btn btn-secondary" id="resetUaBtn">🔄 恢复默认</button>
+      <button class="btn btn-primary" id="saveUaBtn">💾 保存生效</button>
+      <button class="btn btn-outline" id="toggleRulesBtn">⚙️ 规则管理</button>
+    </div>
+
+    <div class="ua-input-row">
+      <textarea class="ua-textarea" id="customUaInput" placeholder="User-Agent 字符串 (选择预设自动填入，支持自定义修改)..."></textarea>
+    </div>
+
+    <div class="ua-bottom-row">
+      <label class="checkbox-label">
+        <input type="checkbox" id="autoReloadCheckbox" checked>
+        <span>保存/切换配置后自动刷新当前标签页</span>
+      </label>
+    </div>
+
+    <!-- Collapsible Rules Management List -->
+    <div class="rules-panel" id="rulesPanel">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-weight: 600; color: #386047;">已持久化保存的网站 UA 规则</span>
+        <button class="btn btn-secondary" id="clearAllRulesBtn" style="padding: 2px 6px; font-size: 10px;">清空全部规则</button>
+      </div>
+      <div class="rules-list" id="rulesList">
+        <div class="rules-empty">暂无为特定网站配置的自定义 UA</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: WebRTC 防泄漏与隐私控制 (WebRTC Control) -->
+  <div class="section-box">
+    <div class="section-title">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span>🛡️ WebRTC 隐私与 IP 防泄漏控制</span>
+      </div>
+      <span class="ua-status-badge active" id="webrtcStatusBadge">🟢 保护中: 禁用非代理 UDP</span>
+    </div>
+
+    <div class="webrtc-controls-row">
+      <select class="select-control" id="webrtcPolicySelect">
+        <option value="disable_non_proxied_udp">🛡️ 禁用非代理 UDP (最高隐私防漏·强制走代理)</option>
+        <option value="default_public_interface_only">🔒 仅公网接口 (隐藏局域网私有内网 IP)</option>
+        <option value="block_api">🚫 完全禁用 WebRTC API (屏蔽 RTCPeerConnection)</option>
+        <option value="default_public_and_private_interfaces">⚠️ 允许公网与私网 (默认路由)</option>
+        <option value="default">🌐 原生默认策略 (不作限制)</option>
+      </select>
+      <button class="btn btn-primary" id="saveWebrtcBtn">💾 应用策略</button>
+    </div>
+    <div class="webrtc-tip" id="webrtcPolicyTip">
+      模式说明：强制所有 WebRTC 流量走代理转发，杜绝真实 IP 绕过代理泄露。
+    </div>
+  </div>
+
+  <!-- Section 3: Cookie & 请求头集成导出 -->
+  <div class="section-box">
+    <div class="section-title">
+      <span>🍪 Cookie & 请求头导出</span>
+      <span style="font-size: 11px; color: #4a745b;" id="kshopIndicator"></span>
+    </div>
+
+    <div class="export-tabs">
+      <button class="export-tab active" data-tab="header">Header 字符串</button>
+      <button class="export-tab" data-tab="python">Python 脚本 (含UA)</button>
+      <button class="export-tab" data-tab="curl">cURL 命令 (含UA)</button>
+      <button class="export-tab" data-tab="json">完整 JSON (含UA)</button>
+      <button class="export-tab" data-tab="netscape">Netscape txt</button>
+    </div>
+
+    <textarea class="preview-box" id="preview" readonly></textarea>
+
+    <div class="footer-bar">
+      <span class="footer-tip">已集成当前网站 Cookie 与生效的 User-Agent</span>
+      <div class="btn-group">
+        <button class="btn btn-secondary" id="downloadBtn">💾 导出文件</button>
+        <button class="btn btn-primary" id="copyBtn">📋 一键复制</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
