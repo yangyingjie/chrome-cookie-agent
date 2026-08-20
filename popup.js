@@ -1,8 +1,8 @@
-// Popup Controller: Cookie & User-Agent & WebRTC 统一集成面板
+// Popup Controller: Grok 账号助手 & Cookie / UA / WebRTC 通用工具箱
 
-// ========================
-// 1. User-Agent 预设库
-// ========================
+// ==========================================
+// 1. 常量与预设库配置
+// ==========================================
 const UA_PRESETS = {
   DEFAULT: '',
   IPHONE_15: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
@@ -21,7 +21,6 @@ const UA_PRESETS = {
   BING_BOT: 'Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)'
 };
 
-// WebRTC 策略说明字典
 const WEBRTC_TIPS = {
   disable_non_proxied_udp: '🛡️ 最高防泄漏模式：强制所有 WebRTC 数据经由代理转发，防止真实 IP 绕过代理发生泄露（代理环境必备）。',
   default_public_interface_only: '🔒 仅公网模式：仅使用默认路由的公网 IP，向网页隐藏局域网私有 IP（如 192.168.x.x）。',
@@ -30,9 +29,9 @@ const WEBRTC_TIPS = {
   default: '🌐 原生默认模式：浏览器默认策略，WebRTC 可绑定任意可用网络接口。'
 };
 
-// ========================
+// ==========================================
 // 2. 状态变量与 DOM 引用
-// ========================
+// ==========================================
 let currentCookies = [];
 let activeTabInfo = null;
 let currentHostname = '';
@@ -41,8 +40,69 @@ let currentExportTab = 'header';
 const defaultBrowserUa = navigator.userAgent;
 let effectiveUa = defaultBrowserUa;
 
-// UA DOM
+// Grok 助手状态
+let grokData = {
+  activeAccountId: null,
+  accounts: []
+};
+
+// 顶部导航 DOM
+const navTabGrok = document.getElementById('navTabGrok');
+const navTabToolbox = document.getElementById('navTabToolbox');
+const panelGrok = document.getElementById('panelGrok');
+const panelToolbox = document.getElementById('panelToolbox');
 const statsInfo = document.getElementById('statsInfo');
+
+// Grok 极速切换栏 DOM
+const grokAccountSelect = document.getElementById('grokAccountSelect');
+const grokQuickSwitchBtn = document.getElementById('grokQuickSwitchBtn');
+
+// Grok 工具栏 DOM
+const grokCaptureBtn = document.getElementById('grokCaptureBtn');
+const grokRefreshQuotaBtn = document.getElementById('grokRefreshQuotaBtn');
+const grokAddManualBtn = document.getElementById('grokAddManualBtn');
+const grokImportBtn = document.getElementById('grokImportBtn');
+const grokExportBtn = document.getElementById('grokExportBtn');
+const grokResetSessionBtn = document.getElementById('grokResetSessionBtn');
+const grokOpenWebBtn = document.getElementById('grokOpenWebBtn');
+const grokClearAllBtn = document.getElementById('grokClearAllBtn');
+
+const grokActiveName = document.getElementById('grokActiveName');
+const grokActiveTierBadge = document.getElementById('grokActiveTierBadge');
+const grokActiveStatus = document.getElementById('grokActiveStatus');
+const grokLastUpdated = document.getElementById('grokLastUpdated');
+const grokAccountCount = document.getElementById('grokAccountCount');
+const grokAccountsContainer = document.getElementById('grokAccountsContainer');
+
+// 额度指标 DOM
+const deepsearchRemaining = document.getElementById('deepsearchRemaining');
+const deepsearchTotal = document.getElementById('deepsearchTotal');
+const deepsearchBar = document.getElementById('deepsearchBar');
+const deepsearchReset = document.getElementById('deepsearchReset');
+
+const thinkRemaining = document.getElementById('thinkRemaining');
+const thinkTotal = document.getElementById('thinkTotal');
+const thinkBar = document.getElementById('thinkBar');
+const thinkReset = document.getElementById('thinkReset');
+
+const standardRemaining = document.getElementById('standardRemaining');
+const standardTotal = document.getElementById('standardTotal');
+const standardBar = document.getElementById('standardBar');
+const standardReset = document.getElementById('standardReset');
+
+// Grok Modal DOM
+const grokModalOverlay = document.getElementById('grokModalOverlay');
+const grokModalTitle = document.getElementById('grokModalTitle');
+const grokModalDesc = document.getElementById('grokModalDesc');
+const grokModalInput = document.getElementById('grokModalInput');
+const grokModalFileInput = document.getElementById('grokModalFileInput');
+const grokModalChooseFileBtn = document.getElementById('grokModalChooseFileBtn');
+const grokModalCancelBtn = document.getElementById('grokModalCancelBtn');
+const grokModalConfirmBtn = document.getElementById('grokModalConfirmBtn');
+let grokModalMode = 'import'; // 'import' | 'manual' | 'rename'
+let grokModalTargetAccountId = null;
+
+// Universal Toolbox DOM
 const kshopIndicator = document.getElementById('kshopIndicator');
 const currentDomainText = document.getElementById('currentDomainText');
 const activeUaBadge = document.getElementById('activeUaBadge');
@@ -56,20 +116,50 @@ const rulesPanel = document.getElementById('rulesPanel');
 const rulesListContainer = document.getElementById('rulesList');
 const clearAllRulesBtn = document.getElementById('clearAllRulesBtn');
 
-// WebRTC DOM
+// Picture-in-Picture (画中画) DOM
+const pipStatusBadge = document.getElementById('pipStatusBadge');
+const pipToggleBtn = document.getElementById('pipToggleBtn');
+const pipRefreshBtn = document.getElementById('pipRefreshBtn');
+const pipShortcutBtn = document.getElementById('pipShortcutBtn');
+const autoPipCheckbox = document.getElementById('autoPipCheckbox');
+const pipVideoCountTip = document.getElementById('pipVideoCountTip');
+
+// Speed & Audio Controller (倍速与音量增强) DOM
+const speedCurrentBadge = document.getElementById('speedCurrentBadge');
+const speedDomainText = document.getElementById('speedDomainText');
+const speedPitchCheckbox = document.getElementById('speedPitchCheckbox');
+const speedSlider = document.getElementById('speedSlider');
+const speedInput = document.getElementById('speedInput');
+const speedMinusBtn = document.getElementById('speedMinusBtn');
+const speedPlusBtn = document.getElementById('speedPlusBtn');
+const speedResetBtn = document.getElementById('speedResetBtn');
+const volumeBoostSlider = document.getElementById('volumeBoostSlider');
+const volumeBoostValue = document.getElementById('volumeBoostValue');
+const speedMediaCountTip = document.getElementById('speedMediaCountTip');
+const speedHotkeysCheckbox = document.getElementById('speedHotkeysCheckbox');
+const speedScopeRadios = document.querySelectorAll('input[name="speedScope"]');
+const speedPresetBtns = document.querySelectorAll('.speed-preset-btn');
+
+let currentSpeedValue = 1.0;
+let currentVolumeBoostValue = 1.0;
+let currentPitchPreserve = true;
+let currentSpeedHotkeysEnabled = true;
+let currentSpeedScope = 'global';
+let siteSpeedMap = {};
+let globalSpeed = 1.0;
+
 const webrtcStatusBadge = document.getElementById('webrtcStatusBadge');
 const webrtcPolicySelect = document.getElementById('webrtcPolicySelect');
 const saveWebrtcBtn = document.getElementById('saveWebrtcBtn');
 const webrtcPolicyTip = document.getElementById('webrtcPolicyTip');
 
-// Export DOM
 const preview = document.getElementById('preview');
 const copyBtn = document.getElementById('copyBtn');
 const downloadBtn = document.getElementById('downloadBtn');
 
-// ========================
-// 3. 辅助函数
-// ========================
+// ==========================================
+// 3. 通用辅助函数
+// ==========================================
 function normalizeDomain(domain) {
   if (!domain) return '';
   return domain.trim().toLowerCase()
@@ -78,6 +168,926 @@ function normalizeDomain(domain) {
     .split(':')[0]
     .replace(/^\.+/, '');
 }
+
+function formatRelativeTime(timestamp) {
+  if (!timestamp) return '未同步';
+  const diff = Date.now() - timestamp;
+  if (diff < 60000) return '刚刚刷新';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)} 分钟前`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)} 小时前`;
+  return new Date(timestamp).toLocaleDateString();
+}
+
+function formatResetCountdown(resetTimeStr, windowSeconds) {
+  if (!resetTimeStr) return '⏳ 额度充足';
+  try {
+    const resetDate = new Date(resetTimeStr);
+    const diffMs = resetDate.getTime() - Date.now();
+    if (diffMs <= 0) return '⏳ 即将重置';
+
+    const diffMins = Math.ceil(diffMs / 60000);
+    if (diffMins < 60) return `⏳ ${diffMins} 分钟后重置`;
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `⏳ ${hours}小时${mins > 0 ? mins + '分' : ''}后重置`;
+  } catch (e) {
+    return '⏳ 自动重置';
+  }
+}
+
+// ==========================================
+// 4. Tab 切换逻辑
+// ==========================================
+function switchTab(targetPanelId) {
+  if (targetPanelId === 'panelGrok') {
+    if (navTabGrok) navTabGrok.classList.add('active');
+    if (navTabToolbox) navTabToolbox.classList.remove('active');
+    if (panelGrok) panelGrok.classList.add('active');
+    if (panelToolbox) panelToolbox.classList.remove('active');
+  } else {
+    if (navTabToolbox) navTabToolbox.classList.add('active');
+    if (navTabGrok) navTabGrok.classList.remove('active');
+    if (panelToolbox) panelToolbox.classList.add('active');
+    if (panelGrok) panelGrok.classList.remove('active');
+  }
+}
+
+if (navTabGrok && navTabToolbox) {
+  navTabGrok.addEventListener('click', () => switchTab('panelGrok'));
+  navTabToolbox.addEventListener('click', () => switchTab('panelToolbox'));
+}
+
+// ==========================================
+// 5. Grok 账号助手核心功能
+// ==========================================
+
+// 加载 Grok 存储数据并渲染
+async function loadGrokData() {
+  try {
+    const store = await chrome.storage.local.get(['grokData']);
+    grokData = store.grokData || { activeAccountId: null, accounts: [] };
+
+    if (!Array.isArray(grokData.accounts)) {
+      grokData.accounts = [];
+    }
+
+    renderGrokUI();
+  } catch (err) {
+    console.error('Failed to load Grok data:', err);
+  }
+}
+
+// 保存 Grok 数据
+async function saveGrokData() {
+  await chrome.storage.local.set({ grokData });
+  renderGrokUI();
+}
+
+// 渲染 Grok 完整界面
+function renderGrokUI() {
+  const accounts = grokData.accounts || [];
+  if (grokAccountCount) {
+    grokAccountCount.textContent = accounts.length;
+  }
+
+  // 1. 填充顶部快速切换下拉框
+  renderQuickSwitcherSelect(accounts);
+
+  // 2. 查找当前活跃账号
+  let activeAccount = null;
+  if (grokData.activeAccountId) {
+    activeAccount = accounts.find(a => a.id === grokData.activeAccountId);
+  }
+
+  // 3. 渲染顶部活跃账号状态卡
+  if (activeAccount) {
+    if (grokActiveName) grokActiveName.textContent = activeAccount.name || 'Grok 账号';
+    if (grokActiveStatus) {
+      grokActiveStatus.className = 'ua-status-badge active';
+      grokActiveStatus.textContent = '🟢 已连接生效';
+    }
+    if (grokActiveTierBadge) {
+      const tier = (activeAccount.tier || 'unknown').toLowerCase();
+      grokActiveTierBadge.textContent = activeAccount.tier || 'Standard';
+      grokActiveTierBadge.className = `tier-badge ${tier}`;
+    }
+    if (grokLastUpdated) {
+      const lu = activeAccount.rateLimits ? activeAccount.rateLimits.lastUpdated : activeAccount.updatedAt;
+      grokLastUpdated.textContent = `更新于: ${formatRelativeTime(lu)}`;
+    }
+
+    renderQuotaDashboard(activeAccount.rateLimits);
+  } else {
+    if (grokActiveName) grokActiveName.textContent = accounts.length > 0 ? '未选定活跃账号' : '未检测到已连接账号';
+    if (grokActiveStatus) {
+      grokActiveStatus.className = 'ua-status-badge';
+      grokActiveStatus.textContent = '⚪ 离线 / 未选定';
+    }
+    if (grokActiveTierBadge) {
+      grokActiveTierBadge.textContent = '未知';
+      grokActiveTierBadge.className = 'tier-badge';
+    }
+    if (grokLastUpdated) grokLastUpdated.textContent = '未同步额度';
+
+    renderQuotaDashboard(null);
+  }
+
+  // 4. 渲染账号列表
+  renderAccountsList();
+}
+
+// 渲染极速切换下拉框
+function renderQuickSwitcherSelect(accounts) {
+  if (!grokAccountSelect) return;
+  grokAccountSelect.innerHTML = '';
+
+  if (!accounts || accounts.length === 0) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '-- 暂无已保存账号 (请先点击捕获或导入) --';
+    grokAccountSelect.appendChild(opt);
+    grokAccountSelect.disabled = true;
+    if (grokQuickSwitchBtn) grokQuickSwitchBtn.disabled = true;
+    return;
+  }
+
+  grokAccountSelect.disabled = false;
+  if (grokQuickSwitchBtn) grokQuickSwitchBtn.disabled = false;
+
+  accounts.forEach((acc, idx) => {
+    const opt = document.createElement('option');
+    opt.value = acc.id;
+    const isAct = acc.id === grokData.activeAccountId;
+    const q = acc.rateLimits || {};
+    const ds = q.deepsearch && q.deepsearch.remaining !== undefined ? q.deepsearch.remaining : '--';
+    const th = q.thinking && q.thinking.remaining !== undefined ? q.thinking.remaining : '--';
+    const st = q.standard && q.standard.remaining !== undefined ? q.standard.remaining : '--';
+    
+    opt.textContent = `${isAct ? '🟢 [当前] ' : `${idx + 1}. `}${acc.name} (${acc.tier || 'SuperGrok'}) | DS:${ds} Think:${th} Std:${st}`;
+    if (isAct) {
+      opt.selected = true;
+    }
+    grokAccountSelect.appendChild(opt);
+  });
+
+  if (grokData.activeAccountId) {
+    grokAccountSelect.value = grokData.activeAccountId;
+  }
+}
+
+// 渲染额度卡片
+function renderQuotaDashboard(rateLimits) {
+  const defaultQuota = {
+    deepsearch: { remaining: '--', total: '--', resetTime: null },
+    thinking: { remaining: '--', total: '--', resetTime: null },
+    standard: { remaining: '--', total: '--', resetTime: null }
+  };
+
+  const q = rateLimits || defaultQuota;
+
+  function updateCard(itemKey, remElem, totElem, barElem, resetElem, fallbackTotal) {
+    const info = q[itemKey] || {};
+    const remaining = info.remaining !== undefined ? info.remaining : '--';
+    const total = info.total !== undefined ? info.total : fallbackTotal;
+
+    if (remElem) remElem.textContent = remaining;
+    if (totElem) totElem.textContent = total;
+
+    if (barElem) {
+      if (typeof remaining === 'number' && typeof total === 'number' && total > 0) {
+        const pct = Math.min(100, Math.max(0, Math.round((remaining / total) * 100)));
+        barElem.style.width = `${pct}%`;
+        barElem.className = 'quota-bar-fill' + (pct === 0 ? ' danger' : (pct <= 25 ? ' warn' : ''));
+      } else {
+        barElem.style.width = '100%';
+        barElem.className = 'quota-bar-fill';
+      }
+    }
+
+    if (resetElem) {
+      if (info.resetTime) {
+        resetElem.textContent = formatResetCountdown(info.resetTime, info.windowSeconds);
+      } else if (remaining !== '--') {
+        resetElem.textContent = '⏳ 额度充足';
+      } else {
+        resetElem.textContent = '⏳ 等待查询';
+      }
+    }
+  }
+
+  updateCard('deepsearch', deepsearchRemaining, deepsearchTotal, deepsearchBar, deepsearchReset, 10);
+  updateCard('thinking', thinkRemaining, thinkTotal, thinkBar, thinkReset, 15);
+  updateCard('standard', standardRemaining, standardTotal, standardBar, standardReset, 80);
+}
+
+// 渲染账号列表
+function renderAccountsList() {
+  if (!grokAccountsContainer) return;
+  grokAccountsContainer.innerHTML = '';
+
+  const accounts = grokData.accounts || [];
+  if (accounts.length === 0) {
+    grokAccountsContainer.innerHTML = `
+      <div class="accounts-empty">
+        暂无已保存账号。请先在浏览器中登录 grok.com，然后点击上方 <strong>「➕ 捕获当前账号」</strong> 或 <strong>「📥 导入」</strong> 备份数据。
+      </div>
+    `;
+    return;
+  }
+
+  accounts.forEach(account => {
+    const isActive = account.id === grokData.activeAccountId;
+    const card = document.createElement('div');
+    card.className = `grok-account-card ${isActive ? 'active-account' : ''}`;
+    card.dataset.accountId = account.id;
+
+    const tier = (account.tier || 'Standard').toUpperCase();
+    const q = account.rateLimits || {};
+    const dsRem = q.deepsearch && q.deepsearch.remaining !== undefined ? q.deepsearch.remaining : '--';
+    const thRem = q.thinking && q.thinking.remaining !== undefined ? q.thinking.remaining : '--';
+    const stRem = q.standard && q.standard.remaining !== undefined ? q.standard.remaining : '--';
+
+    card.innerHTML = `
+      <div class="account-main">
+        <div class="account-header-line">
+          <span class="account-name" title="${account.name}">${account.name}</span>
+          <span class="tier-badge ${account.tier ? account.tier.toLowerCase() : ''}">${tier}</span>
+          ${isActive ? '<span class="ua-status-badge active" style="font-size: 9px; padding: 1px 5px;">🟢 当前生效中</span>' : ''}
+        </div>
+        <div class="account-sub-line">
+          <span>${account.email || account.userId || 'Session Token'}</span>
+          <span>•</span>
+          <span>${formatRelativeTime(account.updatedAt)}</span>
+        </div>
+        <div class="account-quota-summary">
+          <span class="quota-chip" title="DeepSearch 剩余额度">🔍 DS: ${dsRem}</span>
+          <span class="quota-chip" title="Thinking 思考剩余额度">🧠 Think: ${thRem}</span>
+          <span class="quota-chip" title="Standard 问答剩余额度">💬 Std: ${stRem}</span>
+        </div>
+      </div>
+      <div class="account-actions">
+        ${!isActive 
+          ? `<button class="btn btn-switch-highlight btn-sm" data-action="switch" data-id="${account.id}" title="点击立即切换至此账号并同步 Cookie">⚡ 切换</button>` 
+          : `<button class="btn btn-secondary btn-sm" data-action="reapply" data-id="${account.id}" title="重新写入此账号 Cookie">🔄 重连</button>`
+        }
+        <button class="btn btn-secondary btn-sm" data-action="refresh" data-id="${account.id}" title="刷新此账号额度">🔄 额度</button>
+        <button class="btn btn-outline btn-sm" data-action="edit" data-id="${account.id}" title="修改名称/备注">✏️</button>
+        <button class="btn-icon" data-action="delete" data-id="${account.id}" title="删除此账号">🗑️</button>
+      </div>
+    `;
+
+    // 点击整张卡片（非按钮区域）也可以直接切换
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;
+      if (!isActive) {
+        switchGrokAccount(account.id);
+      }
+    });
+
+    grokAccountsContainer.appendChild(card);
+  });
+
+  // 绑定账号卡片按钮事件
+  grokAccountsContainer.querySelectorAll('button[data-action]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+
+      if (action === 'switch' || action === 'reapply') {
+        btn.textContent = '⏳ 切换中...';
+        await switchGrokAccount(id);
+      } else if (action === 'refresh') {
+        btn.textContent = '⏳...';
+        await refreshSpecificAccountQuota(id);
+        btn.textContent = '🔄 额度';
+      } else if (action === 'edit') {
+        openEditAccountModal(id);
+      } else if (action === 'delete') {
+        if (confirm('确定删除此 Grok 账号吗？')) {
+          grokData.accounts = grokData.accounts.filter(a => a.id !== id);
+          if (grokData.activeAccountId === id) {
+            grokData.activeAccountId = grokData.accounts.length > 0 ? grokData.accounts[0].id : null;
+          }
+          await saveGrokData();
+        }
+      }
+    });
+  });
+}
+
+// 捕获当前浏览器登录的 Grok 账号
+async function captureCurrentGrokAccount() {
+  try {
+    if (grokCaptureBtn) grokCaptureBtn.textContent = '⏳ 捕获中...';
+
+    // 1. 获取所有 Grok Cookies
+    const resp = await chrome.runtime.sendMessage({ type: 'GET_GROK_COOKIES' });
+    const cookies = resp && resp.cookies ? resp.cookies : [];
+
+    // 检查核心 SSO Cookie
+    const ssoCookie = cookies.find(c => c.name === 'sso' || c.name === 'sso-rw');
+
+    if (!ssoCookie && cookies.length === 0) {
+      alert('未检测到 Grok 登录态 Cookie！\n请先在当前浏览器中打开 https://grok.com 并登录账号，然后再点击捕获。');
+      if (grokCaptureBtn) grokCaptureBtn.textContent = '➕ 捕获当前账号';
+      return;
+    }
+
+    // 2. 尝试从 grok.com 接口拉取用户身份与额度
+    let userInfo = { name: 'Grok 账号', email: '', userId: '', tier: 'SuperGrok' };
+    let quotaData = null;
+
+    try {
+      const userRes = await fetch('https://grok.com/rest/app-chat/users/me', {
+        headers: { 'Accept': 'application/json' }
+      });
+      if (userRes.ok) {
+        const u = await userRes.json();
+        userInfo.userId = u.id || u.userId || '';
+        userInfo.name = u.name || u.username || u.email || 'Grok 用户';
+        userInfo.email = u.email || '';
+        if (u.subscription && u.subscription.tier) {
+          userInfo.tier = u.subscription.tier;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not fetch user info from me endpoint:', e);
+    }
+
+    // 拉取额度
+    quotaData = await fetchAllGrokQuotas();
+
+    // 3. 构建或更新账号
+    const existingIndex = grokData.accounts.findIndex(a => 
+      (userInfo.userId && a.userId === userInfo.userId) ||
+      (userInfo.email && a.email === userInfo.email) ||
+      (a.ssoPreview && ssoCookie && a.ssoPreview === ssoCookie.value.slice(0, 20))
+    );
+
+    const now = Date.now();
+    const newAccount = {
+      id: existingIndex >= 0 ? grokData.accounts[existingIndex].id : `acc_${now}`,
+      name: existingIndex >= 0 ? grokData.accounts[existingIndex].name : (userInfo.name || `Grok 账号 ${grokData.accounts.length + 1}`),
+      email: userInfo.email,
+      userId: userInfo.userId,
+      tier: userInfo.tier || 'SuperGrok',
+      cookies: cookies,
+      ssoPreview: ssoCookie ? ssoCookie.value.slice(0, 20) : '',
+      rateLimits: quotaData || (existingIndex >= 0 ? grokData.accounts[existingIndex].rateLimits : null),
+      createdAt: existingIndex >= 0 ? grokData.accounts[existingIndex].createdAt : now,
+      updatedAt: now
+    };
+
+    if (existingIndex >= 0) {
+      grokData.accounts[existingIndex] = newAccount;
+    } else {
+      grokData.accounts.push(newAccount);
+    }
+
+    grokData.activeAccountId = newAccount.id;
+    await saveGrokData();
+
+    if (grokCaptureBtn) {
+      grokCaptureBtn.textContent = '✅ 捕获成功!';
+      setTimeout(() => { if (grokCaptureBtn) grokCaptureBtn.textContent = '➕ 捕获当前账号'; }, 1500);
+    }
+  } catch (err) {
+    console.error('Capture account failed:', err);
+    alert('捕获账号失败: ' + err.message);
+    if (grokCaptureBtn) grokCaptureBtn.textContent = '➕ 捕获当前账号';
+  }
+}
+
+// 从 Grok 官方接口获取全量配额
+async function fetchAllGrokQuotas() {
+  const result = {
+    lastUpdated: Date.now(),
+    deepsearch: { remaining: 10, total: 10, resetTime: null, windowSeconds: 86400 },
+    thinking: { remaining: 15, total: 15, resetTime: null, windowSeconds: 86400 },
+    standard: { remaining: 80, total: 80, resetTime: null, windowSeconds: 7200 }
+  };
+
+  const kinds = [
+    { key: 'standard', kind: 'DEFAULT' },
+    { key: 'deepsearch', kind: 'DEEPSEARCH' },
+    { key: 'thinking', kind: 'REASONING' }
+  ];
+
+  try {
+    const promises = kinds.map(async item => {
+      try {
+        const res = await fetch('https://grok.com/rest/rate-limits', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({ requestKind: item.kind })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          result[item.key] = {
+            remaining: typeof data.remainingQueries === 'number' ? data.remainingQueries : result[item.key].remaining,
+            total: typeof data.totalQueries === 'number' ? data.totalQueries : result[item.key].total,
+            resetTime: data.resetTime || null,
+            windowSeconds: data.windowSeconds || result[item.key].windowSeconds
+          };
+        }
+      } catch (e) {
+        console.warn(`Fetch quota for ${item.kind} failed:`, e);
+      }
+    });
+
+    await Promise.all(promises);
+    return result;
+  } catch (e) {
+    console.warn('fetchAllGrokQuotas error:', e);
+    return result;
+  }
+}
+
+// 刷新当前活跃账号额度
+async function refreshActiveGrokQuota() {
+  if (grokRefreshQuotaBtn) grokRefreshQuotaBtn.textContent = '⏳ 刷新中...';
+
+  try {
+    const quota = await fetchAllGrokQuotas();
+    if (grokData.activeAccountId) {
+      const acc = grokData.accounts.find(a => a.id === grokData.activeAccountId);
+      if (acc) {
+        acc.rateLimits = quota;
+        acc.updatedAt = Date.now();
+        await saveGrokData();
+      }
+    } else {
+      renderQuotaDashboard(quota);
+    }
+
+    if (grokRefreshQuotaBtn) {
+      grokRefreshQuotaBtn.textContent = '✅ 已刷新!';
+      setTimeout(() => { if (grokRefreshQuotaBtn) grokRefreshQuotaBtn.textContent = '🔄 刷新额度'; }, 1500);
+    }
+  } catch (err) {
+    console.error('Refresh quota failed:', err);
+    if (grokRefreshQuotaBtn) grokRefreshQuotaBtn.textContent = '🔄 刷新额度';
+  }
+}
+
+// 一键切换 Grok 账号核心实现
+async function switchGrokAccount(accountId) {
+  if (!accountId) return;
+  const targetAccount = grokData.accounts.find(a => a.id === accountId);
+  if (!targetAccount) return;
+
+  try {
+    // 1. 发送切换消息至 background (自动双域同步 .grok.com 与 .x.ai)
+    const resp = await chrome.runtime.sendMessage({
+      type: 'SWITCH_GROK_ACCOUNT',
+      cookies: targetAccount.cookies,
+      accountId: targetAccount.id
+    });
+
+    if (!resp || !resp.success) {
+      throw new Error((resp && resp.error) || '切换 Cookie 失败');
+    }
+
+    grokData.activeAccountId = targetAccount.id;
+    await saveGrokData();
+
+    // 2. 检查并智能处理当前标签页 (若在 grok.com 则直接刷新)
+    if (activeTabInfo && activeTabInfo.url && (activeTabInfo.url.includes('grok.com') || activeTabInfo.url.includes('x.ai'))) {
+      chrome.tabs.reload(activeTabInfo.id);
+    }
+
+    // 3. 立即刷新此账号的最新额度
+    refreshActiveGrokQuota();
+  } catch (err) {
+    alert('切换账号失败: ' + err.message);
+  }
+}
+
+// 刷新指定账号额度 (切换并刷新)
+async function refreshSpecificAccountQuota(accountId) {
+  if (grokData.activeAccountId !== accountId) {
+    await switchGrokAccount(accountId);
+  } else {
+    await refreshActiveGrokQuota();
+  }
+}
+
+// 极速切换下拉框与按钮事件绑定
+if (grokQuickSwitchBtn && grokAccountSelect) {
+  grokQuickSwitchBtn.addEventListener('click', async () => {
+    const selectedId = grokAccountSelect.value;
+    if (!selectedId) {
+      alert('请先选择要切换的 Grok 账号！');
+      return;
+    }
+    grokQuickSwitchBtn.textContent = '⏳ 切换中...';
+    await switchGrokAccount(selectedId);
+    grokQuickSwitchBtn.textContent = '✅ 切换成功!';
+    setTimeout(() => { if (grokQuickSwitchBtn) grokQuickSwitchBtn.textContent = '⚡ 立即切换'; }, 1500);
+  });
+
+  grokAccountSelect.addEventListener('change', async () => {
+    const selectedId = grokAccountSelect.value;
+    if (selectedId && selectedId !== grokData.activeAccountId) {
+      grokQuickSwitchBtn.textContent = '⏳ 切换中...';
+      await switchGrokAccount(selectedId);
+      grokQuickSwitchBtn.textContent = '✅ 切换成功!';
+      setTimeout(() => { if (grokQuickSwitchBtn) grokQuickSwitchBtn.textContent = '⚡ 立即切换'; }, 1500);
+    }
+  });
+}
+
+// 清理 Grok 登录态与会话缓存 (解决死循环重定向)
+async function resetGrokSession() {
+  if (!confirm('确认彻底清除当前浏览器的 Grok / x.ai 登录 Cookie 缓存吗？\n可用于解决页面死循环重定向或登录异常问题。')) {
+    return;
+  }
+
+  try {
+    if (grokResetSessionBtn) grokResetSessionBtn.textContent = '⏳ 清理中...';
+    await chrome.runtime.sendMessage({ type: 'CLEAR_GROK_SESSION' });
+    grokData.activeAccountId = null;
+    await saveGrokData();
+
+    if (activeTabInfo && activeTabInfo.url && (activeTabInfo.url.includes('grok.com') || activeTabInfo.url.includes('x.ai'))) {
+      chrome.tabs.reload(activeTabInfo.id);
+    }
+
+    if (grokResetSessionBtn) {
+      grokResetSessionBtn.textContent = '✅ 已清理!';
+      setTimeout(() => { if (grokResetSessionBtn) grokResetSessionBtn.textContent = '🧹 清除Cookie'; }, 1500);
+    }
+    alert('Grok 与 x.ai 登录缓存已彻底清除！页面将恢复为纯净未登录状态，你可以重新登录或点击切换账号。');
+  } catch (err) {
+    alert('清理失败: ' + err.message);
+    if (grokResetSessionBtn) grokResetSessionBtn.textContent = '🧹 清除Cookie';
+  }
+}
+
+// 解析 JWT Payload
+function parseJwtPayload(token) {
+  try {
+    const parts = (token || '').split('.');
+    if (parts.length >= 2) {
+      const base64Url = parts[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      return JSON.parse(jsonPayload);
+    }
+  } catch (e) {
+    try {
+      const parts = (token || '').split('.');
+      if (parts.length >= 2) {
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const binary = atob(base64);
+        return JSON.parse(binary);
+      }
+    } catch (e2) {
+      console.warn('JWT parse error:', e2);
+    }
+  }
+  return null;
+}
+
+// 根据 Grok SSO Token 创建标准账号对象
+function createAccountFromSsoToken(token, defaultName = null) {
+  const cleanToken = (token || '').trim();
+  const payload = parseJwtPayload(cleanToken) || {};
+  const sessionId = payload.session_id || payload.sub || payload.user_id || '';
+  const now = Date.now();
+
+  const cookies = [
+    {
+      name: 'sso',
+      value: cleanToken,
+      domain: '.grok.com',
+      path: '/',
+      secure: true,
+      httpOnly: true,
+      sameSite: 'lax'
+    },
+    {
+      name: 'sso-rw',
+      value: cleanToken,
+      domain: '.grok.com',
+      path: '/',
+      secure: true,
+      httpOnly: true,
+      sameSite: 'lax'
+    }
+  ];
+
+  const displayName = defaultName || (sessionId ? `Grok 账号 (${sessionId.slice(0, 8)})` : `Grok 账号`);
+
+  return {
+    id: `acc_${now}_${Math.random().toString(36).slice(2, 6)}`,
+    name: displayName,
+    email: payload.email || '',
+    userId: sessionId,
+    tier: 'SuperGrok',
+    cookies: cookies,
+    ssoPreview: cleanToken.slice(0, 20),
+    rateLimits: null,
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+// 解析任意格式的 Grok 导入内容
+function parseRawGrokInput(rawInput) {
+  const text = (rawInput || '').trim();
+  if (!text) return [];
+  let accountsToImport = [];
+
+  // 1. 尝试 JSON 解析
+  try {
+    const parsed = JSON.parse(text);
+    if (Array.isArray(parsed)) {
+      if (parsed.length > 0 && typeof parsed[0] === 'string') {
+        accountsToImport = parsed.map((token, i) => createAccountFromSsoToken(token, `Grok 账号 ${i + 1}`));
+      } else if (parsed.length > 0 && parsed[0].cookies) {
+        accountsToImport = parsed;
+      } else if (parsed.length > 0 && (parsed[0].name === 'sso' || parsed[0].name === 'sso-rw' || parsed[0].domain)) {
+        const ssoCookie = parsed.find(c => c.name === 'sso' || c.name === 'sso-rw');
+        const token = ssoCookie ? ssoCookie.value : '';
+        if (token) {
+          accountsToImport = [createAccountFromSsoToken(token)];
+        } else {
+          accountsToImport = [{
+            id: `acc_${Date.now()}`,
+            name: `导入账号`,
+            cookies: parsed,
+            tier: 'SuperGrok',
+            rateLimits: null,
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          }];
+        }
+      } else if (parsed.length > 0 && typeof parsed[0] === 'object') {
+        accountsToImport = parsed.map((item, i) => {
+          if (item.cookies) return item;
+          if (item.token || item.sso) return createAccountFromSsoToken(item.token || item.sso, item.name || `Grok 账号 ${i + 1}`);
+          return null;
+        }).filter(Boolean);
+      }
+    } else if (parsed && typeof parsed === 'object') {
+      if (Array.isArray(parsed.accounts)) {
+        accountsToImport = parsed.accounts.map((item, i) => {
+          if (typeof item === 'string') {
+            return createAccountFromSsoToken(item, `Grok 账号 ${i + 1}`);
+          } else if (item && typeof item === 'object') {
+            if (item.cookies) return item;
+            if (item.token || item.sso) return createAccountFromSsoToken(item.token || item.sso, item.name || `Grok 账号 ${i + 1}`);
+          }
+          return null;
+        }).filter(Boolean);
+      } else if (Array.isArray(parsed.tokens)) {
+        accountsToImport = parsed.tokens.map((token, i) => createAccountFromSsoToken(token, `Grok 账号 ${i + 1}`));
+      } else if (parsed.cookies && Array.isArray(parsed.cookies)) {
+        accountsToImport = [parsed];
+      } else if (parsed.token || parsed.sso) {
+        accountsToImport = [createAccountFromSsoToken(parsed.token || parsed.sso, parsed.name)];
+      }
+    }
+  } catch (e) {
+    // 2. Fallback: 正则匹配文本中可能存在的 JWT Token 字符串
+    const jwtRegex = /eyJ[A-Za-z0-9-_]+\.eyJ[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+/g;
+    const matches = text.match(jwtRegex);
+    if (matches && matches.length > 0) {
+      const uniqueTokens = Array.from(new Set(matches));
+      accountsToImport = uniqueTokens.map((token, i) => createAccountFromSsoToken(token, `Grok 账号 ${i + 1}`));
+    }
+  }
+
+  return accountsToImport;
+}
+
+// 导出所有账号备份 (JSON)
+function exportGrokAccounts() {
+  if (!grokData.accounts || grokData.accounts.length === 0) {
+    alert('当前没有可导出的账号数据！');
+    return;
+  }
+
+  const ssoTokens = grokData.accounts.map(a => {
+    if (a.cookies && Array.isArray(a.cookies)) {
+      const sso = a.cookies.find(c => c.name === 'sso' || c.name === 'sso-rw');
+      if (sso && sso.value) return sso.value;
+    }
+    return a.ssoPreview || null;
+  }).filter(Boolean);
+
+  const exportPayload = {
+    accounts: ssoTokens, // 100% 兼容 Chrome 商店 Grok Account Helper 标准格式
+    version: '1.4.0',
+    exportTime: new Date().toISOString(),
+    generator: 'Cookie & Grok Assistant Pro',
+    accountsCount: grokData.accounts.length,
+    fullAccounts: grokData.accounts
+  };
+
+  const jsonStr = JSON.stringify(exportPayload, null, 2);
+  
+  navigator.clipboard.writeText(jsonStr);
+
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `grok_accounts_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+
+  if (grokExportBtn) {
+    grokExportBtn.textContent = '✅ 已导出并复制!';
+    setTimeout(() => { if (grokExportBtn) grokExportBtn.textContent = '📤 备份导出'; }, 1500);
+  }
+}
+
+// 导入账号 JSON 或 Token 数据
+async function importGrokAccountsData(rawJsonStr) {
+  try {
+    const accountsToImport = parseRawGrokInput(rawJsonStr);
+
+    if (!accountsToImport || accountsToImport.length === 0) {
+      throw new Error('未识别到有效的账号数据格式。请确保粘贴了正确的 JSON 备份或 JWT Token 列表。');
+    }
+
+    let addedCount = 0;
+    let updatedCount = 0;
+
+    for (const acc of accountsToImport) {
+      if (!acc.cookies || !Array.isArray(acc.cookies)) continue;
+      
+      const ssoCookie = acc.cookies.find(c => c.name === 'sso' || c.name === 'sso-rw');
+      const ssoToken = ssoCookie ? ssoCookie.value : '';
+      const ssoPreview = ssoToken ? ssoToken.slice(0, 20) : (acc.ssoPreview || '');
+      const userId = acc.userId || '';
+
+      const existIdx = grokData.accounts.findIndex(a => {
+        if (acc.id && a.id === acc.id) return true;
+        if (userId && a.userId && a.userId === userId) return true;
+        if (acc.email && a.email && a.email === acc.email) return true;
+        if (ssoPreview && a.ssoPreview && a.ssoPreview === ssoPreview) return true;
+        if (ssoToken && a.cookies && Array.isArray(a.cookies)) {
+          const aSso = a.cookies.find(c => c.name === 'sso' || c.name === 'sso-rw');
+          if (aSso && aSso.value === ssoToken) return true;
+        }
+        return false;
+      });
+
+      if (existIdx >= 0) {
+        grokData.accounts[existIdx] = {
+          ...grokData.accounts[existIdx],
+          ...acc,
+          id: grokData.accounts[existIdx].id,
+          name: acc.name && !acc.name.startsWith('Grok 账号') ? acc.name : grokData.accounts[existIdx].name,
+          updatedAt: Date.now()
+        };
+        updatedCount++;
+      } else {
+        const newAcc = {
+          id: acc.id || `acc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+          name: acc.name || `Grok 账号 ${grokData.accounts.length + 1}`,
+          email: acc.email || '',
+          userId: userId,
+          tier: acc.tier || 'SuperGrok',
+          cookies: acc.cookies,
+          ssoPreview: ssoPreview,
+          rateLimits: acc.rateLimits || null,
+          createdAt: acc.createdAt || Date.now(),
+          updatedAt: Date.now()
+        };
+        grokData.accounts.push(newAcc);
+        addedCount++;
+      }
+    }
+
+    if (!grokData.activeAccountId && grokData.accounts.length > 0) {
+      grokData.activeAccountId = grokData.accounts[0].id;
+    }
+
+    await saveGrokData();
+    closeGrokModal();
+    alert(`🎉 导入成功！共解析 ${accountsToImport.length} 个账号：新增 ${addedCount} 个，更新 ${updatedCount} 个。`);
+  } catch (err) {
+    alert('导入失败: ' + err.message);
+  }
+}
+
+// Modal 弹窗控制
+function openGrokModal(mode, targetAccountId = null) {
+  grokModalMode = mode;
+  grokModalTargetAccountId = targetAccountId;
+  if (!grokModalOverlay) return;
+
+  if (mode === 'import') {
+    grokModalTitle.textContent = '📥 导入 Grok 账号备份';
+    grokModalDesc.textContent = '请在下方粘贴导出的账号备份 JSON，或直接选择 .json 文件：';
+    grokModalInput.placeholder = '粘贴 JSON 数组或对象，例如: [{"name": "主账号", "cookies": [...]}]';
+    grokModalInput.value = '';
+    grokModalConfirmBtn.textContent = '确认导入';
+    grokModalChooseFileBtn.style.display = 'inline-flex';
+  } else if (mode === 'manual') {
+    grokModalTitle.textContent = '✏️ 手动添加 Grok 账号';
+    grokModalDesc.textContent = '请粘贴单个账号的 Cookies JSON 数组或完整账号对象：';
+    grokModalInput.placeholder = '[{"name": "sso", "value": "...", "domain": ".grok.com", "path": "/"}]';
+    grokModalInput.value = '';
+    grokModalConfirmBtn.textContent = '保存账号';
+    grokModalChooseFileBtn.style.display = 'none';
+  } else if (mode === 'rename') {
+    const acc = grokData.accounts.find(a => a.id === targetAccountId);
+    grokModalTitle.textContent = '✏️ 修改账号名称 / 备注';
+    grokModalDesc.textContent = '请输入新的账号显示名称：';
+    grokModalInput.placeholder = '例如: 工作主号 / SuperGrok 2号';
+    grokModalInput.value = acc ? acc.name : '';
+    grokModalConfirmBtn.textContent = '保存修改';
+    grokModalChooseFileBtn.style.display = 'none';
+  }
+
+  grokModalOverlay.classList.add('show');
+}
+
+function openEditAccountModal(accountId) {
+  openGrokModal('rename', accountId);
+}
+
+function closeGrokModal() {
+  if (grokModalOverlay) {
+    grokModalOverlay.classList.remove('show');
+    grokModalInput.value = '';
+  }
+}
+
+// Grok 事件绑定
+if (grokCaptureBtn) grokCaptureBtn.addEventListener('click', captureCurrentGrokAccount);
+if (grokRefreshQuotaBtn) grokRefreshQuotaBtn.addEventListener('click', refreshActiveGrokQuota);
+if (grokAddManualBtn) grokAddManualBtn.addEventListener('click', () => openGrokModal('manual'));
+if (grokImportBtn) grokImportBtn.addEventListener('click', () => openGrokModal('import'));
+if (grokExportBtn) grokExportBtn.addEventListener('click', exportGrokAccounts);
+if (grokResetSessionBtn) grokResetSessionBtn.addEventListener('click', resetGrokSession);
+if (grokOpenWebBtn) {
+  grokOpenWebBtn.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://grok.com' });
+  });
+}
+if (grokClearAllBtn) {
+  grokClearAllBtn.addEventListener('click', async () => {
+    if (confirm('确定清空所有已保存的 Grok 账号吗？此操作不可逆，请先做好导出备份！')) {
+      grokData.accounts = [];
+      grokData.activeAccountId = null;
+      await saveGrokData();
+    }
+  });
+}
+
+// Modal 内部事件
+if (grokModalCancelBtn) grokModalCancelBtn.addEventListener('click', closeGrokModal);
+if (grokModalChooseFileBtn && grokModalFileInput) {
+  grokModalChooseFileBtn.addEventListener('click', () => grokModalFileInput.click());
+  grokModalFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (grokModalInput) grokModalInput.value = evt.target.result;
+    };
+    reader.readAsText(file);
+  });
+}
+
+if (grokModalConfirmBtn) {
+  grokModalConfirmBtn.addEventListener('click', async () => {
+    const val = (grokModalInput ? grokModalInput.value : '').trim();
+    if (!val) {
+      alert('内容不能为空！');
+      return;
+    }
+
+    if (grokModalMode === 'import' || grokModalMode === 'manual') {
+      await importGrokAccountsData(val);
+    } else if (grokModalMode === 'rename' && grokModalTargetAccountId) {
+      const acc = grokData.accounts.find(a => a.id === grokModalTargetAccountId);
+      if (acc) {
+        acc.name = val;
+        acc.updatedAt = Date.now();
+        await saveGrokData();
+      }
+      closeGrokModal();
+    }
+  });
+}
+
+
+// ==========================================
+// 6. 通用工具箱 (UA / WebRTC / Cookie 导出)
+// ==========================================
 
 function findPresetKeyByUa(ua) {
   if (!ua || !ua.trim()) return 'DEFAULT';
@@ -133,9 +1143,7 @@ function getSelectedScope() {
   return checked ? checked.value : 'site';
 }
 
-// ========================
-// 4. User-Agent 事件绑定与加载
-// ========================
+// User-Agent 事件绑定
 if (uaPresetsSelect) {
   uaPresetsSelect.addEventListener('change', () => {
     const selectedKey = uaPresetsSelect.value;
@@ -180,7 +1188,6 @@ async function loadUaSettings() {
   const siteMatch = findMatchingSiteRule(currentHostname, siteUaMap);
   const siteConfig = siteMatch ? siteMatch.config : null;
 
-  // 判定当前生效的 UA
   if (siteConfig && siteConfig.enabled && siteConfig.ua && siteConfig.ua.trim()) {
     effectiveUa = siteConfig.ua.trim();
     if (activeUaBadge) {
@@ -201,7 +1208,6 @@ async function loadUaSettings() {
     }
   }
 
-  // 同步编辑区与预设下拉框
   if (scope === 'site') {
     if (siteConfig && siteConfig.enabled && siteConfig.ua) {
       if (customUaInput) customUaInput.value = siteConfig.ua;
@@ -373,9 +1379,7 @@ if (clearAllRulesBtn) {
   });
 }
 
-// ========================
-// 5. WebRTC Control 逻辑
-// ========================
+// WebRTC 策略逻辑
 async function loadWebrtcSettings() {
   const data = await chrome.storage.local.get(['webrtcPolicy']);
   const policy = data.webrtcPolicy || 'disable_non_proxied_udp';
@@ -449,9 +1453,7 @@ function maybeReloadActiveTab() {
   }
 }
 
-// ========================
-// 6. Cookie & UA 集成导出格式化
-// ========================
+// Cookie 导出格式化
 function toCookieHeaderString(cookies) {
   return (cookies || []).map(c => `${c.name}=${c.value}`).join('; ');
 }
@@ -499,7 +1501,7 @@ function formatAsNetscape(cookies, ua) {
   const lines = [
     '# Netscape HTTP Cookie File',
     '# http://curl.haxx.se/rfc/cookie_spec.html',
-    '# Generated by Cookie & User-Agent Switcher Pro',
+    '# Generated by Cookie & Grok Assistant Pro',
     `# User-Agent: ${ua}`,
     '# Domain\tIncludeSubdomains\tPath\tSecure\tExpiry\tName\tValue'
   ];
@@ -579,16 +1581,501 @@ if (downloadBtn) {
   });
 }
 
-// ========================
-// 7. 初始化与数据读取
-// ========================
+function isRestrictedUrl(url) {
+  if (!url) return false;
+  return /^(chrome|chrome-extension|edge|devtools|about|view-source):/i.test(url);
+}
+
+// ==========================================
+// 6.5 视频画中画 (Picture-in-Picture) 控制逻辑
+// ==========================================
+function renderPipStatus(status) {
+  if (!pipStatusBadge || !pipToggleBtn) return;
+
+  if (isRestrictedUrl(currentUrl) || (status && status.isRestricted)) {
+    pipStatusBadge.textContent = '⚪ 系统页面不支持画中画';
+    pipStatusBadge.className = 'ua-status-badge';
+    pipToggleBtn.innerHTML = '🪟 开启/切换 画中画 (Alt+P)';
+    if (pipVideoCountTip) pipVideoCountTip.textContent = 'Chrome 限制内置页，请在普通视频网页使用';
+    return;
+  }
+
+  if (!status || status.error) {
+    pipStatusBadge.textContent = '⚪ 未检测到视频';
+    pipStatusBadge.className = 'ua-status-badge';
+    pipToggleBtn.innerHTML = '🪟 开启/切换 画中画 (Alt+P)';
+    if (pipVideoCountTip) pipVideoCountTip.textContent = '支持 Shadow DOM 递归穿透';
+    return;
+  }
+
+  if (status.isInPip) {
+    pipStatusBadge.textContent = '🪟 画中画运行中';
+    pipStatusBadge.className = 'ua-status-badge active';
+    pipToggleBtn.innerHTML = '⏹️ 退出画中画 (Alt+P)';
+    if (pipVideoCountTip) pipVideoCountTip.textContent = '当前正在画中画独立浮窗播放';
+  } else if (status.playingVideos > 0) {
+    pipStatusBadge.textContent = `🟢 ${status.playingVideos} 个视频播放中`;
+    pipStatusBadge.className = 'ua-status-badge active';
+    pipToggleBtn.innerHTML = '🪟 开启画中画 (Alt+P)';
+    if (pipVideoCountTip) pipVideoCountTip.textContent = `检测到 ${status.totalVideos} 个视频 (${status.playingVideos} 个播放中)`;
+  } else if (status.totalVideos > 0) {
+    pipStatusBadge.textContent = `🟡 ${status.totalVideos} 个视频 (未播放)`;
+    pipStatusBadge.className = 'ua-status-badge';
+    pipToggleBtn.innerHTML = '🪟 开启画中画 (Alt+P)';
+    if (pipVideoCountTip) pipVideoCountTip.textContent = `已发现 ${status.totalVideos} 个就绪视频，点击一键唤起`;
+  } else {
+    pipStatusBadge.textContent = '⚪ 当前页面未检测到视频';
+    pipStatusBadge.className = 'ua-status-badge';
+    pipToggleBtn.innerHTML = '🪟 开启/切换 画中画 (Alt+P)';
+    if (pipVideoCountTip) pipVideoCountTip.textContent = '支持嵌套播放器与 Shadow DOM 穿透';
+  }
+}
+
+async function loadPipSettingsAndStatus() {
+  try {
+    // 1. 加载 Auto-PiP 配置 (默认开启 true)
+    const data = await chrome.storage.local.get(['autoPipEnabled']);
+    const isAutoPipOn = (data.autoPipEnabled !== undefined) ? Boolean(data.autoPipEnabled) : true;
+    if (autoPipCheckbox) {
+      autoPipCheckbox.checked = isAutoPipOn;
+    }
+    if (data.autoPipEnabled === undefined) {
+      await chrome.storage.local.set({ autoPipEnabled: true });
+    }
+
+    // 2. 如果当前在系统受限页面，直接展示提示
+    if (isRestrictedUrl(currentUrl)) {
+      renderPipStatus({ isRestricted: true });
+      return;
+    }
+
+    // 3. 查询当前激活标签页的视频与 PiP 状态 (动态穿透扫描，彻底解决旧页面连接丢失问题)
+    if (activeTabInfo && activeTabInfo.id) {
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: activeTabInfo.id },
+          func: () => {
+            if (window.__CHROME_PIP_ENGINE__) {
+              return window.__CHROME_PIP_ENGINE__.getPipStatus();
+            }
+            const doc = document;
+            const vList = Array.from(doc.querySelectorAll('video'));
+            const playing = vList.filter(v => !v.paused && v.currentTime > 0);
+            return {
+              supported: 'pictureInPictureEnabled' in doc,
+              totalVideos: vList.length,
+              playingVideos: playing.length,
+              isInPip: Boolean(doc.pictureInPictureElement)
+            };
+          }
+        }).catch(() => null);
+
+        if (results && results[0] && results[0].result) {
+          renderPipStatus(results[0].result);
+        } else {
+          renderPipStatus({ totalVideos: 0, playingVideos: 0, isInPip: false });
+        }
+      } catch (e) {
+        renderPipStatus({ totalVideos: 0, playingVideos: 0, isInPip: false });
+      }
+    }
+  } catch (e) {
+    console.warn('[PiP Popup] load status failed:', e);
+  }
+}
+
+// 绑定画中画按钮事件
+if (pipToggleBtn) {
+  pipToggleBtn.addEventListener('click', async () => {
+    if (!activeTabInfo || !activeTabInfo.id) {
+      alert('无法在当前页面操作画中画');
+      return;
+    }
+
+    if (isRestrictedUrl(currentUrl)) {
+      alert('提示：Chrome 安全策略禁止在系统内置页面 (chrome://) 执行画中画。\n\n请在常规网页（例如 Bilibili、YouTube、腾讯视频等）中使用画中画功能。');
+      return;
+    }
+
+    const originalText = pipToggleBtn.innerHTML;
+    pipToggleBtn.disabled = true;
+    pipToggleBtn.innerHTML = '⏳ 正在处理...';
+
+    try {
+      // 在用户点击手势 (User Gesture) 上下文中直接执行脚本，确保满足浏览器 requestPictureInPicture 权限要求
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: activeTabInfo.id },
+        func: async () => {
+          if (window.__CHROME_PIP_ENGINE__) {
+            return await window.__CHROME_PIP_ENGINE__.togglePictureInPicture();
+          }
+
+          // Fallback 原生查找与切换
+          const doc = document;
+          if (doc.pictureInPictureElement) {
+            await doc.exitPictureInPicture();
+            return { success: true, action: 'exited', message: '已退出画中画模式' };
+          }
+
+          const videos = Array.from(doc.querySelectorAll('video'));
+          for (const v of videos) {
+            if (v.disablePictureInPicture) v.disablePictureInPicture = false;
+            if (v.hasAttribute && v.hasAttribute('disablepictureinpicture')) v.removeAttribute('disablepictureinpicture');
+          }
+
+          const bestVideo = videos.find(v => !v.paused && v.currentTime > 0) || videos[0];
+          if (!bestVideo) {
+            return { success: false, error: 'NO_VIDEO_FOUND', message: '当前网页未检测到视频元素' };
+          }
+
+          if (bestVideo.requestPictureInPicture) {
+            await bestVideo.requestPictureInPicture();
+            return { success: true, action: 'entered', message: '已开启画中画模式' };
+          } else {
+            return { success: false, error: 'NOT_SUPPORTED', message: '当前浏览器环境不支持 Picture-in-Picture' };
+          }
+        }
+      });
+
+      pipToggleBtn.disabled = false;
+      pipToggleBtn.innerHTML = originalText;
+
+      const res = results && results[0] && results[0].result;
+      if (res && res.success) {
+        setTimeout(() => {
+          loadPipSettingsAndStatus();
+        }, 300);
+      } else {
+        const errMsg = (res && res.message) || '未检测到可画中画的视频元素';
+        alert('提示: ' + errMsg + '\n\n💡 提示：您也可以在视频网页中直接按快捷键 Alt+P (Mac: Option+P) 或鼠标右键开启画中画。');
+        loadPipSettingsAndStatus();
+      }
+    } catch (err) {
+      pipToggleBtn.disabled = false;
+      pipToggleBtn.innerHTML = originalText;
+      console.warn('[PiP Popup Execution Error]', err);
+      alert('画中画执行提示: ' + err.message + '\n\n💡 提示：您也可以直接在视频网页中按快捷键 Alt+P (Mac: Option+P) 或鼠标右键开启画中画。');
+      loadPipSettingsAndStatus();
+    }
+  });
+}
+
+if (pipRefreshBtn) {
+  pipRefreshBtn.addEventListener('click', () => {
+    if (pipStatusBadge) {
+      pipStatusBadge.textContent = '🔄 扫描中...';
+    }
+    loadPipSettingsAndStatus();
+    loadSpeedSettingsAndStatus();
+  });
+}
+
+if (pipShortcutBtn) {
+  pipShortcutBtn.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  });
+}
+
+if (autoPipCheckbox) {
+  autoPipCheckbox.addEventListener('change', async (e) => {
+    const enabled = Boolean(e.target.checked);
+    await chrome.storage.local.set({ autoPipEnabled: enabled });
+    if (activeTabInfo && activeTabInfo.id) {
+      chrome.tabs.sendMessage(activeTabInfo.id, { type: 'SET_AUTO_PIP', enabled }).catch(() => {});
+    }
+  });
+}
+
+// ==========================================
+// 6.6 视频/音频倍速与音量增强 (Speed & Audio) 控制逻辑
+// ==========================================
+function updateSpeedUI(speed, volumeBoost, pitch) {
+  if (speed !== undefined) {
+    currentSpeedValue = Math.max(0.05, Math.min(16.0, Math.round(Number(speed) * 100) / 100));
+    if (speedCurrentBadge) speedCurrentBadge.textContent = `${currentSpeedValue.toFixed(2)}x`;
+    if (speedSlider) speedSlider.value = currentSpeedValue;
+    if (speedInput) speedInput.value = currentSpeedValue.toFixed(2);
+
+    if (speedPresetBtns) {
+      speedPresetBtns.forEach(btn => {
+        const btnSpeed = parseFloat(btn.dataset.speed);
+        if (Math.abs(btnSpeed - currentSpeedValue) < 0.01) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  if (volumeBoost !== undefined) {
+    currentVolumeBoostValue = Math.max(1.0, Math.min(6.0, Number(volumeBoost) || 1.0));
+    const pct = Math.round(currentVolumeBoostValue * 100);
+    if (volumeBoostSlider) volumeBoostSlider.value = pct;
+    if (volumeBoostValue) volumeBoostValue.textContent = (pct === 100) ? '100% (正常)' : `${pct}% (放大)`;
+  }
+
+  if (pitch !== undefined) {
+    currentPitchPreserve = Boolean(pitch);
+    if (speedPitchCheckbox) speedPitchCheckbox.checked = currentPitchPreserve;
+  }
+}
+
+async function loadSpeedSettingsAndStatus() {
+  try {
+    if (speedDomainText) {
+      speedDomainText.textContent = currentHostname || '当前页';
+    }
+
+    const data = await chrome.storage.local.get(['siteSpeedMap', 'globalSpeed', 'speedPreservePitch', 'speedHotkeysEnabled', 'speedScope']);
+    siteSpeedMap = data.siteSpeedMap || {};
+    globalSpeed = (data.globalSpeed !== undefined) ? Number(data.globalSpeed) : 1.0;
+    currentPitchPreserve = (data.speedPreservePitch !== undefined) ? Boolean(data.speedPreservePitch) : true;
+    currentSpeedHotkeysEnabled = (data.speedHotkeysEnabled !== undefined) ? Boolean(data.speedHotkeysEnabled) : true;
+    currentSpeedScope = data.speedScope || 'global';
+
+    if (speedScopeRadios) {
+      speedScopeRadios.forEach(radio => {
+        radio.checked = (radio.value === currentSpeedScope);
+      });
+    }
+
+    if (speedHotkeysCheckbox) {
+      speedHotkeysCheckbox.checked = currentSpeedHotkeysEnabled;
+    }
+    if (data.speedHotkeysEnabled === undefined) {
+      await chrome.storage.local.set({ speedHotkeysEnabled: true });
+    }
+    if (data.speedScope === undefined) {
+      await chrome.storage.local.set({ speedScope: 'global' });
+    }
+
+    let initSpeed = globalSpeed;
+    let initVolume = 1.0;
+
+    if (currentSpeedScope === 'site' && currentHostname && siteSpeedMap[currentHostname]) {
+      const cfg = siteSpeedMap[currentHostname];
+      if (cfg.speed !== undefined) initSpeed = Number(cfg.speed);
+      if (cfg.volumeBoost !== undefined) initVolume = Number(cfg.volumeBoost);
+    }
+
+    updateSpeedUI(initSpeed, initVolume, currentPitchPreserve);
+
+    // 动态扫描目标页面的媒体元素与倍速状态 (跨进程稳健直通)
+    if (activeTabInfo && activeTabInfo.id && !isRestrictedUrl(currentUrl)) {
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: activeTabInfo.id },
+          func: (hotkeysOn) => {
+            if (window.__CHROME_SPEED_ENGINE__) {
+              if (window.__CHROME_SPEED_ENGINE__.setupHotkeys) {
+                window.__CHROME_SPEED_ENGINE__.setupHotkeys(hotkeysOn);
+              }
+              return window.__CHROME_SPEED_ENGINE__.getSpeedStatus();
+            }
+
+            const doc = document;
+            const mediaList = Array.from(doc.querySelectorAll('video, audio'));
+            return {
+              speed: 1.0,
+              volumeBoost: 1.0,
+              preservesPitch: true,
+              hotkeysEnabled: hotkeysOn,
+              mediaCount: mediaList.length,
+              hasMedia: mediaList.length > 0
+            };
+          },
+          args: [currentSpeedHotkeysEnabled]
+        }).catch(() => null);
+
+        if (results && results[0] && results[0].result) {
+          const res = results[0].result;
+          if (speedMediaCountTip) {
+            speedMediaCountTip.textContent = res.mediaCount > 0 ? `🟢 已连接 ${res.mediaCount} 个媒体` : '⚪ 当前页未检测到媒体';
+          }
+          if (res.speed) {
+            updateSpeedUI(res.speed, res.volumeBoost, res.preservesPitch);
+          }
+        } else {
+          if (speedMediaCountTip) speedMediaCountTip.textContent = '⚪ 当前页未检测到媒体';
+        }
+      } catch (err) {
+        if (speedMediaCountTip) speedMediaCountTip.textContent = '⚪ 当前页未检测到媒体';
+      }
+    } else {
+      if (speedMediaCountTip) speedMediaCountTip.textContent = '⚪ 系统页面无可用媒体';
+    }
+  } catch (e) {
+    console.warn('[Speed Popup] load settings failed:', e);
+  }
+}
+
+async function applySpeedChange(newSpeed, persist = true) {
+  const targetSpeed = Math.max(0.05, Math.min(16.0, Math.round(Number(newSpeed) * 100) / 100));
+  updateSpeedUI(targetSpeed, undefined, currentPitchPreserve);
+
+  if (persist) {
+    if (currentSpeedScope === 'site' && currentHostname) {
+      if (!siteSpeedMap[currentHostname]) siteSpeedMap[currentHostname] = {};
+      siteSpeedMap[currentHostname].speed = targetSpeed;
+      await chrome.storage.local.set({ siteSpeedMap, speedScope: 'site' });
+    } else {
+      globalSpeed = targetSpeed;
+      await chrome.storage.local.set({ globalSpeed: targetSpeed, speedScope: 'global' });
+    }
+  }
+
+  // 跨进程直接注入执行与消息分发双保险
+  if (activeTabInfo && activeTabInfo.id && !isRestrictedUrl(currentUrl)) {
+    chrome.scripting.executeScript({
+      target: { tabId: activeTabInfo.id },
+      func: (spd, pitch) => {
+        if (window.__CHROME_SPEED_ENGINE__) {
+          window.__CHROME_SPEED_ENGINE__.setSpeed(spd, pitch, true);
+        } else {
+          const list = Array.from(document.querySelectorAll('video, audio'));
+          for (const m of list) {
+            try {
+              m.playbackRate = spd;
+              m.defaultPlaybackRate = spd;
+              if ('preservesPitch' in m) m.preservesPitch = pitch;
+            } catch (e) {}
+          }
+        }
+      },
+      args: [targetSpeed, currentPitchPreserve]
+    }).catch(() => {});
+  }
+}
+
+async function applyVolumeBoostChange(newBoost, persist = true) {
+  const targetBoost = Math.max(1.0, Math.min(6.0, Math.round(Number(newBoost) * 100) / 100));
+  updateSpeedUI(undefined, targetBoost, undefined);
+
+  if (persist && currentHostname) {
+    if (!siteSpeedMap[currentHostname]) siteSpeedMap[currentHostname] = {};
+    siteSpeedMap[currentHostname].volumeBoost = targetBoost;
+    await chrome.storage.local.set({ siteSpeedMap });
+  }
+
+  if (activeTabInfo && activeTabInfo.id && !isRestrictedUrl(currentUrl)) {
+    chrome.scripting.executeScript({
+      target: { tabId: activeTabInfo.id },
+      func: (boost) => {
+        if (window.__CHROME_SPEED_ENGINE__) {
+          window.__CHROME_SPEED_ENGINE__.setVolumeBoost(boost, true);
+        }
+      },
+      args: [targetBoost]
+    }).catch(() => {});
+  }
+}
+
+// 绑定快捷键全局开关
+if (speedHotkeysCheckbox) {
+  speedHotkeysCheckbox.addEventListener('change', async (e) => {
+    const enabled = Boolean(e.target.checked);
+    currentSpeedHotkeysEnabled = enabled;
+    await chrome.storage.local.set({ speedHotkeysEnabled: enabled });
+    if (activeTabInfo && activeTabInfo.id && !isRestrictedUrl(currentUrl)) {
+      chrome.scripting.executeScript({
+        target: { tabId: activeTabInfo.id },
+        func: (en) => {
+          if (window.__CHROME_SPEED_ENGINE__) {
+            window.__CHROME_SPEED_ENGINE__.setupHotkeys(en);
+          }
+          window.__CHROME_SPEED_HOTKEYS_ENABLED__ = en;
+        },
+        args: [enabled]
+      }).catch(() => {});
+    }
+  });
+}
+
+// 绑定倍速预设按钮
+if (speedPresetBtns) {
+  speedPresetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const speed = parseFloat(btn.dataset.speed);
+      if (!isNaN(speed)) {
+        applySpeedChange(speed);
+      }
+    });
+  });
+}
+
+if (speedMinusBtn) {
+  speedMinusBtn.addEventListener('click', () => {
+    applySpeedChange(Math.max(0.05, currentSpeedValue - 0.1));
+  });
+}
+
+if (speedPlusBtn) {
+  speedPlusBtn.addEventListener('click', () => {
+    applySpeedChange(Math.min(16.0, currentSpeedValue + 0.1));
+  });
+}
+
+if (speedResetBtn) {
+  speedResetBtn.addEventListener('click', () => {
+    applySpeedChange(1.0);
+    applyVolumeBoostChange(1.0);
+  });
+}
+
+if (speedSlider) {
+  speedSlider.addEventListener('input', (e) => {
+    applySpeedChange(parseFloat(e.target.value));
+  });
+}
+
+if (speedInput) {
+  speedInput.addEventListener('change', (e) => {
+    const val = parseFloat(e.target.value);
+    if (!isNaN(val)) {
+      applySpeedChange(val);
+    }
+  });
+}
+
+if (speedPitchCheckbox) {
+  speedPitchCheckbox.addEventListener('change', async (e) => {
+    currentPitchPreserve = Boolean(e.target.checked);
+    await chrome.storage.local.set({ speedPreservePitch: currentPitchPreserve });
+    applySpeedChange(currentSpeedValue);
+  });
+}
+
+if (volumeBoostSlider) {
+  volumeBoostSlider.addEventListener('input', (e) => {
+    const pct = parseFloat(e.target.value);
+    applyVolumeBoostChange(pct / 100);
+  });
+}
+
+if (speedScopeRadios) {
+  speedScopeRadios.forEach(radio => {
+    radio.addEventListener('change', async (e) => {
+      currentSpeedScope = e.target.value;
+      await chrome.storage.local.set({ speedScope: currentSpeedScope });
+      loadSpeedSettingsAndStatus();
+    });
+  });
+}
+
+// ==========================================
+// 7. 全局初始化与数据加载
+// ==========================================
 async function init() {
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !tab.url) {
       if (statsInfo) statsInfo.textContent = '无法获取当前网页';
+      await loadGrokData();
       await loadUaSettings();
       await loadWebrtcSettings();
+      await loadPipSettingsAndStatus();
+      await loadSpeedSettingsAndStatus();
       return;
     }
     activeTabInfo = tab;
@@ -599,6 +2086,11 @@ async function init() {
       currentHostname = normalizeDomain(urlObj.hostname);
       if (currentDomainText) {
         currentDomainText.textContent = currentHostname || '当前页';
+      }
+
+      // 如果当前访问的是 grok.com 或 x.ai 域名，智能默认聚焦 Grok 助手 Tab
+      if (currentHostname.includes('grok.com') || currentHostname.includes('x.ai')) {
+        switchTab('panelGrok');
       }
 
       // 1. 获取当前 URL 的所有 Cookie
@@ -632,7 +2124,7 @@ async function init() {
       const hasKshop = currentCookies.some(c => c.name === 'kshop.api_st');
 
       if (statsInfo) {
-        statsInfo.innerHTML = `站点: <strong>${currentHostname || '本地'}</strong> (共 ${currentCookies.length} 个, HttpOnly: <strong>${httpOnlyCount}</strong> 个)`;
+        statsInfo.innerHTML = `站点: <strong>${currentHostname || '本地'}</strong> (${currentCookies.length} 个 Cookie, HttpOnly: <strong>${httpOnlyCount}</strong>)`;
       }
       if (kshopIndicator) {
         kshopIndicator.textContent = hasKshop ? '✅ 已包含 kshop.api_st' : '';
@@ -641,8 +2133,15 @@ async function init() {
       if (statsInfo) statsInfo.textContent = '非标准网页或无 Cookie';
     }
 
-    await loadUaSettings();
-    await loadWebrtcSettings();
+    // 并行初始化各模块数据
+    await Promise.all([
+      loadGrokData(),
+      loadUaSettings(),
+      loadWebrtcSettings(),
+      loadPipSettingsAndStatus(),
+      loadSpeedSettingsAndStatus()
+    ]);
+
   } catch (err) {
     console.error('Init error:', err);
   }

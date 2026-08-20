@@ -128,6 +128,27 @@ async function syncWebrtcPolicy() {
 chrome.runtime.onInstalled.addListener(() => {
   syncDeclarativeRules();
   syncWebrtcPolicy();
+
+  // 默认启用自动画中画 (Auto-PiP) 与倍速快捷键
+  chrome.storage.local.get(['autoPipEnabled', 'speedHotkeysEnabled'], (res) => {
+    const toSet = {};
+    if (res.autoPipEnabled === undefined) toSet.autoPipEnabled = true;
+    if (res.speedHotkeysEnabled === undefined) toSet.speedHotkeysEnabled = true;
+    if (Object.keys(toSet).length > 0) {
+      chrome.storage.local.set(toSet);
+    }
+  });
+
+  // 注册画中画右键快捷菜单
+  try {
+    chrome.contextMenus.create({
+      id: 'context_toggle_pip',
+      title: '🪟 开启/切换 画中画 (Alt+P)',
+      contexts: ['video', 'page', 'frame']
+    });
+  } catch (e) {
+    console.warn('[PiP] Context menu registration:', e);
+  }
 });
 
 chrome.runtime.onStartup.addListener(() => {
@@ -226,4 +247,364 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     Promise.all([syncDeclarativeRules(), syncWebrtcPolicy()]).then(() => sendResponse({ success: true }));
     return true;
   }
+
+  // ==========================================
+  // Grok 账号助手 Background 核心通信调度
+  // ==========================================
+  if (message.type === 'GET_GROK_COOKIES') {
+    (async () => {
+      try {
+        const cookies = await getGrokCookies();
+        sendResponse({ success: true, cookies });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'SWITCH_GROK_ACCOUNT') {
+    (async () => {
+      try {
+        const { cookies, accountId } = message;
+        if (!cookies || !Array.isArray(cookies)) {
+          throw new Error('未提供有效的 Cookies 数组');
+        }
+
+        // 1. 清理当前所有 Grok 相关域与 x.ai 相关域的 Cookies，防止冲突
+        await clearGrokCookies();
+
+        // 2. 依次注入目标账号的 Cookies (支持 .grok.com 与 .x.ai 双域同步)
+        for (const c of cookies) {
+          await setCookieForDomain(c);
+
+          // 若为核心 SSO Token，同时同步写入 .x.ai 域，杜绝 accounts.x.ai 握手时死循环
+          if (c.name === 'sso' || c.name === 'sso-rw') {
+            await setCookieForDomain({
+              ...c,
+              domain: '.x.ai'
+            });
+          }
+        }
+
+        // 3. 更新 storage 中的 activeAccountId
+        if (accountId) {
+          const store = await chrome.storage.local.get(['grokData']);
+          const grokData = store.grokData || { accounts: [], activeAccountId: null };
+          grokData.activeAccountId = accountId;
+          await chrome.storage.local.set({ grokData });
+        }
+
+        sendResponse({ success: true });
+      } catch (err) {
+        console.error('[Grok Switcher] 切换失败:', err);
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'CLEAR_GROK_SESSION') {
+    (async () => {
+      try {
+        await clearGrokCookies();
+        const store = await chrome.storage.local.get(['grokData']);
+        const grokData = store.grokData || { accounts: [], activeAccountId: null };
+        grokData.activeAccountId = null;
+        await chrome.storage.local.set({ grokData });
+        sendResponse({ success: true });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'FETCH_GROK_QUOTA') {
+    (async () => {
+      try {
+        const quotaData = await fetchGrokRateLimits();
+        sendResponse({ success: true, data: quotaData });
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  // ==========================================
+  // 画中画 (Picture-in-Picture) 后台调度
+  // ==========================================
+  if (message.type === 'TOGGLE_PIP_ON_ACTIVE_TAB') {
+    (async () => {
+      try {
+        let tabId = message.tabId;
+        if (!tabId) {
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          tabId = activeTab ? activeTab.id : null;
+        }
+        const result = await executePipToggleOnTab(tabId);
+        sendResponse(result);
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'QUERY_ACTIVE_TAB_PIP_STATUS') {
+    (async () => {
+      try {
+        let tabId = message.tabId;
+        if (!tabId) {
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          tabId = activeTab ? activeTab.id : null;
+        }
+        const status = await getTabPipStatus(tabId);
+        sendResponse(status);
+      } catch (err) {
+        sendResponse({ supported: false, totalVideos: 0, playingVideos: 0, isInPip: false, error: err.message });
+      }
+    })();
+    return true;
+  }
 });
+
+// 监听全局快捷键 (如 Alt+P / Option+P)
+if (chrome.commands && chrome.commands.onCommand) {
+  chrome.commands.onCommand.addListener(async (command) => {
+    if (command === 'toggle-pip') {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && tab.id) {
+          const result = await executePipToggleOnTab(tab.id);
+          console.log('[PiP Command]', result);
+        }
+      } catch (e) {
+        console.error('[PiP Command Error]', e);
+      }
+    }
+  });
+}
+
+// 监听右键菜单点击
+if (chrome.contextMenus && chrome.contextMenus.onClicked) {
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+    if (info.menuItemId === 'context_toggle_pip') {
+      const targetTabId = (tab && tab.id) ? tab.id : (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
+      if (targetTabId) {
+        const result = await executePipToggleOnTab(targetTabId);
+        console.log('[PiP ContextMenu]', result);
+      }
+    }
+  });
+}
+
+function isRestrictedTabUrl(url) {
+  if (!url) return false;
+  return /^(chrome|chrome-extension|edge|devtools|about|view-source):/i.test(url);
+}
+
+// 核心标签页 PiP 切换执行函数
+async function executePipToggleOnTab(tabId) {
+  if (!tabId) return { success: false, error: 'NO_TAB_ID', message: '无效的标签页目标' };
+
+  try {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab && isRestrictedTabUrl(tab.url)) {
+      return {
+        success: false,
+        error: 'RESTRICTED_URL',
+        message: 'Chrome 安全策略限制：系统内置页面 (如 chrome://) 无法执行画中画，请在常规网页（如 Bilibili / YouTube / 网页视频等）中使用。'
+      };
+    }
+  } catch (e) {}
+
+  // 直接使用 chrome.scripting.executeScript 执行，继承 Command / ContextMenu 的用户手势上下文
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: async () => {
+        if (window.__CHROME_PIP_ENGINE__) {
+          return await window.__CHROME_PIP_ENGINE__.togglePictureInPicture();
+        }
+
+        // Fallback
+        const doc = document;
+        if (doc.pictureInPictureElement) {
+          await doc.exitPictureInPicture();
+          return { success: true, action: 'exited', message: '已退出画中画' };
+        }
+
+        const videos = Array.from(doc.querySelectorAll('video'));
+        for (const v of videos) {
+          if (v.disablePictureInPicture) v.disablePictureInPicture = false;
+        }
+
+        const best = videos.find(v => !v.paused && v.currentTime > 0) || videos[0];
+        if (best && best.requestPictureInPicture) {
+          await best.requestPictureInPicture();
+          return { success: true, action: 'entered', message: '已开启画中画' };
+        }
+        return { success: false, error: 'NO_VIDEO_FOUND', message: '未找到视频元素' };
+      }
+    });
+
+    if (results && results[0] && results[0].result) {
+      return results[0].result;
+    }
+    return { success: false, error: 'EXECUTION_EMPTY', message: '执行返回为空' };
+  } catch (injectErr) {
+    return {
+      success: false,
+      error: injectErr.name || 'INJECTION_FAILED',
+      message: `无法在此页面执行画中画: ${injectErr.message}`
+    };
+  }
+}
+
+// 查询指定标签页的 PiP 状态
+async function getTabPipStatus(tabId) {
+  if (!tabId) return { supported: false, totalVideos: 0, playingVideos: 0, isInPip: false };
+
+  try {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab && isRestrictedTabUrl(tab.url)) {
+      return {
+        supported: false,
+        totalVideos: 0,
+        playingVideos: 0,
+        isInPip: false,
+        isRestricted: true,
+        message: '系统页面不支持画中画'
+      };
+    }
+  } catch (e) {}
+
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: 'GET_PIP_STATUS' });
+    if (res && typeof res.totalVideos === 'number') {
+      return res;
+    }
+  } catch (e) {}
+
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId, allFrames: true },
+      files: ['pip_engine.js']
+    });
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        if (window.__CHROME_PIP_ENGINE__) {
+          return window.__CHROME_PIP_ENGINE__.getPipStatus();
+        }
+        return { supported: false, totalVideos: 0, playingVideos: 0, isInPip: false };
+      }
+    });
+
+    if (results && results[0] && results[0].result) {
+      return results[0].result;
+    }
+  } catch (e) {}
+
+  return { supported: false, totalVideos: 0, playingVideos: 0, isInPip: false };
+}
+
+// Grok Cookie 与 API 工具函数
+const GROK_DOMAINS = ['grok.com', '.grok.com', 'x.ai', '.x.ai', 'api.x.ai', 'accounts.x.ai', 'auth.x.ai'];
+
+async function getGrokCookies() {
+  const cookieMap = new Map();
+  for (const domain of GROK_DOMAINS) {
+    try {
+      const cookies = await chrome.cookies.getAll({ domain });
+      for (const c of cookies) {
+        cookieMap.set(`${c.name}_${c.domain}_${c.path}`, c);
+      }
+    } catch (e) {
+      console.warn('Error reading grok cookies:', domain, e);
+    }
+  }
+  return Array.from(cookieMap.values());
+}
+
+async function clearGrokCookies() {
+  for (const domain of GROK_DOMAINS) {
+    try {
+      const cookies = await chrome.cookies.getAll({ domain });
+      for (const c of cookies) {
+        const protocol = c.secure ? 'https:' : 'http:';
+        const d = c.domain.startsWith('.') ? c.domain.slice(1) : c.domain;
+        await chrome.cookies.remove({
+          url: `${protocol}//${d}${c.path || '/'}`,
+          name: c.name,
+          storeId: c.storeId
+        });
+      }
+    } catch (e) {
+      console.warn('Error clearing grok cookie:', domain, e);
+    }
+  }
+}
+
+async function setCookieForDomain(cookie) {
+  if (!cookie || !cookie.name) return;
+  const rawDomain = cookie.domain || '.grok.com';
+  const cleanDomain = rawDomain.startsWith('.') ? rawDomain.slice(1) : rawDomain;
+  const protocol = cookie.secure !== false ? 'https:' : 'http:';
+  const url = `${protocol}//${cleanDomain}${cookie.path || '/'}`;
+
+  const details = {
+    url: url,
+    name: cookie.name,
+    value: cookie.value || '',
+    path: cookie.path || '/',
+    secure: cookie.secure !== false,
+    httpOnly: Boolean(cookie.httpOnly)
+  };
+
+  if (rawDomain && !cookie.hostOnly) {
+    details.domain = rawDomain.startsWith('.') ? rawDomain : ('.' + rawDomain);
+  }
+
+  if (cookie.sameSite && cookie.sameSite !== 'unspecified') {
+    details.sameSite = cookie.sameSite;
+  } else {
+    details.sameSite = 'lax';
+  }
+
+  if (cookie.expirationDate && !cookie.session) {
+    details.expirationDate = cookie.expirationDate;
+  } else {
+    // 默认提供 30 天有效期，防止 session cookie 丢失
+    details.expirationDate = Math.floor(Date.now() / 1000) + 86400 * 30;
+  }
+
+  try {
+    return await chrome.cookies.set(details);
+  } catch (err) {
+    // 兼容重试：若指定 domain 报错则直接依靠 URL 设置
+    delete details.domain;
+    return await chrome.cookies.set(details).catch(e => console.warn('Cookie set retry failed:', cookie.name, e));
+  }
+}
+
+async function fetchGrokRateLimits() {
+  const res = await fetch('https://grok.com/rest/rate-limits', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({ requestKind: 'DEFAULT' })
+  });
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  }
+
+  return await res.json();
+}
+

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Cookie & User-Agent Switcher Pro (Cookie导出与UA/WebRTC切换器)",
-  "version": "1.3.2",
-  "description": "原生高权限导出网站完整 Cookie，支持网站与全局 User-Agent 切换及 WebRTC IP 防泄漏与隐私保护控制",
+  "name": "Cookie & Grok Account Helper Pro (Grok多账号切换/额度监控 & Cookie/UA工具箱)",
+  "version": "1.6.0",
+  "description": "一键切换多个Grok账号并实时查看DeepSearch/Thinking额度，支持网页视频画中画(Alt+P)、全局0.05-16x媒体倍速与音量放大(600%)、原生高权限Cookie多格式导出、网站与全局UA伪装及WebRTC防泄露控制",
   "permissions": [
     "cookies",
     "storage",
@@ -14,18 +14,28 @@
     "activeTab",
     "scripting",
     "clipboardWrite",
-    "clipboardRead"
+    "clipboardRead",
+    "contextMenus"
   ],
   "host_permissions": [
     "<all_urls>"
   ],
+  "commands": {
+    "toggle-pip": {
+      "suggested_key": {
+        "default": "Alt+P",
+        "mac": "Alt+P"
+      },
+      "description": "开启或退出当前网页视频画中画模式 (Picture-in-Picture)"
+    }
+  },
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content_script.js"],
+      "js": ["speed_engine.js", "pip_engine.js", "content_script.js"],
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true
@@ -45,7 +55,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Cookie 导出 & UA/WebRTC 切换器",
+    "default_title": "Cookie & Grok 助手 Pro (含画中画/UA/WebRTC)",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

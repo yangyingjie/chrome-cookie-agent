@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>Cookie & User-Agent Pro</title>
+  <title>Cookie & Grok Assistant Pro</title>
   <style>
     * {
       box-sizing: border-box;
@@ -29,10 +29,10 @@
     }
 
     body {
-      width: 580px;
-      background: #cce8cf; /* 经典权威豆沙绿底色 (RGB: 204, 232, 207) */
+      width: 620px;
+      background: #cce8cf; /* 权威经典护眼豆沙绿底色 (RGB: 204, 232, 207) */
       color: #173824;
-      padding: 14px 16px;
+      padding: 12px 16px 16px;
       font-size: 12px;
       line-height: 1.45;
     }
@@ -42,8 +42,8 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
-      padding-bottom: 8px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
       border-bottom: 1px solid #b3d6bc;
     }
     .main-title {
@@ -78,6 +78,56 @@
       color: #134e2f;
     }
 
+    /* Top Nav Tabs */
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+      background: #bee0c5;
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid #a7cfaf;
+    }
+    .nav-tab {
+      flex: 1;
+      text-align: center;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #2b573d;
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .nav-tab:hover {
+      color: #0c331c;
+      background: rgba(255, 255, 255, 0.35);
+    }
+    .nav-tab.active {
+      background: #256b46;
+      color: #ffffff;
+      box-shadow: 0 2px 5px rgba(21, 87, 52, 0.25);
+    }
+
+    /* Tab Panels */
+    .tab-panel {
+      display: none;
+    }
+    .tab-panel.active {
+      display: block;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(2px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
     /* Section Containers */
     .section-box {
       background: #daf0de;
@@ -97,7 +147,411 @@
       align-items: center;
     }
 
-    /* UA & WebRTC Top Row */
+    /* Quick Switcher Bar (高亮突出展示) */
+    .grok-switcher-bar {
+      background: #e4f7e8;
+      border: 1.5px solid #256b46;
+      border-radius: 8px;
+      padding: 9px 12px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 6px rgba(37, 107, 70, 0.12);
+    }
+    .grok-switcher-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #134e2f;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    .grok-select-control {
+      flex: 1;
+      background: #ffffff;
+      border: 1.5px solid #82bc90;
+      color: #14492a;
+      font-weight: 600;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      outline: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .grok-select-control:focus {
+      border-color: #256b46;
+      box-shadow: 0 0 0 2px rgba(37, 107, 70, 0.2);
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    .btn {
+      padding: 5px 12px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn-sm {
+      padding: 3px 8px;
+      font-size: 10px;
+    }
+    .btn-secondary {
+      background: #c3e2ca;
+      color: #174227;
+      border: 1px solid #a4cca9;
+    }
+    .btn-secondary:hover {
+      background: #b3d9bb;
+      border-color: #92be99;
+      color: #0c2d18;
+    }
+    .btn-primary {
+      background: #256b46;
+      color: #ffffff;
+      font-weight: 600;
+      border: 1px solid #1e5a3a;
+      box-shadow: 0 2px 4px rgba(37, 107, 70, 0.2);
+    }
+    .btn-primary:hover {
+      background: #1b5335;
+      border-color: #144028;
+      box-shadow: 0 3px 6px rgba(27, 83, 53, 0.3);
+    }
+    .btn-switch-highlight {
+      background: #16a34a;
+      color: #ffffff;
+      font-weight: 700;
+      border: 1px solid #15803d;
+      box-shadow: 0 2px 5px rgba(22, 163, 74, 0.3);
+      padding: 5px 10px;
+    }
+    .btn-switch-highlight:hover {
+      background: #15803d;
+      box-shadow: 0 3px 7px rgba(22, 163, 74, 0.4);
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid #9dc4a4;
+      color: #214d33;
+    }
+    .btn-outline:hover {
+      background: #cae6cf;
+      border-color: #256b46;
+      color: #0d381f;
+    }
+    .btn-icon {
+      background: transparent;
+      border: none;
+      color: #dc2626;
+      cursor: pointer;
+      padding: 3px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+      transition: background 0.15s;
+    }
+    .btn-icon:hover {
+      background: rgba(220, 38, 38, 0.12);
+    }
+
+    /* Badges & Tags */
+    .ua-status-badge {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 5px;
+      background: #c3e2ca;
+      color: #315c41;
+      border: 1px solid #a8cfb1;
+      font-weight: 500;
+    }
+    .ua-status-badge.active {
+      background: #256b46;
+      color: #ffffff;
+      border: 1px solid #1b5335;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(37, 107, 70, 0.2);
+    }
+    .tier-badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #1e5a3a;
+      color: #ffffff;
+    }
+    .tier-badge.supergrok {
+      background: linear-gradient(135deg, #1e5a3a, #0b7285);
+    }
+    .tier-badge.heavy {
+      background: linear-gradient(135deg, #862e9c, #1e5a3a);
+    }
+    .tier-badge.free {
+      background: #6a9179;
+    }
+
+    /* ========================================= */
+    /* Grok Assistant Specific Styles            */
+    /* ========================================= */
+    .grok-top-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+    .grok-header-account {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      margin-bottom: 8px;
+      border-bottom: 1px dashed #b3d6bc;
+    }
+    .grok-active-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .grok-active-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #134e2f;
+    }
+
+    /* Quota Grid Cards */
+    .grok-quota-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .quota-card {
+      background: #ecf8ee;
+      border: 1px solid #a9d0b2;
+      border-radius: 7px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(23, 56, 36, 0.04);
+      transition: all 0.2s;
+    }
+    .quota-card:hover {
+      border-color: #256b46;
+      box-shadow: 0 2px 6px rgba(37, 107, 70, 0.12);
+    }
+    .quota-title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .quota-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #1a4f31;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .quota-value {
+      font-size: 14px;
+      font-weight: 700;
+      color: #134e2f;
+      margin-bottom: 5px;
+    }
+    .quota-value span.quota-total {
+      font-size: 11px;
+      font-weight: normal;
+      color: #557e65;
+    }
+    .quota-bar-wrapper {
+      width: 100%;
+      height: 6px;
+      background: #c7e5cd;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 4px;
+    }
+    .quota-bar-fill {
+      height: 100%;
+      background: #256b46;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      width: 100%;
+    }
+    .quota-bar-fill.warn {
+      background: #d97706;
+    }
+    .quota-bar-fill.danger {
+      background: #dc2626;
+    }
+    .quota-reset-tip {
+      font-size: 10px;
+      color: #598369;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+
+    /* Accounts List */
+    .grok-account-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-height: 240px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+    .grok-account-card {
+      background: #ecf8ee;
+      border: 1px solid #a8cfb1;
+      border-radius: 7px;
+      padding: 9px 11px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+    .grok-account-card:hover {
+      border-color: #256b46;
+      background: #f2fbf4;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(37, 107, 70, 0.1);
+    }
+    .grok-account-card.active-account {
+      border: 2px solid #256b46;
+      background: #e4f7e8;
+      box-shadow: 0 2px 8px rgba(37, 107, 70, 0.18);
+      cursor: default;
+    }
+    .account-main {
+      flex: 1;
+      min-width: 0;
+      margin-right: 8px;
+    }
+    .account-header-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+    .account-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: #15472b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+    .account-sub-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      color: #5c846d;
+    }
+    .account-quota-summary {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .quota-chip {
+      background: #dcf1e0;
+      border: 1px solid #b7dbbe;
+      border-radius: 3px;
+      padding: 1px 5px;
+      font-size: 10px;
+      color: #215134;
+      font-weight: 500;
+    }
+    .account-actions {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .accounts-empty {
+      padding: 24px;
+      text-align: center;
+      color: #4a745b;
+      font-size: 12px;
+      background: #ecf8ee;
+      border: 1px dashed #a8cfb1;
+      border-radius: 7px;
+    }
+
+    /* Modal / Popups */
+    .grok-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(19, 78, 47, 0.45);
+      backdrop-filter: blur(2px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .grok-modal-overlay.show {
+      display: flex;
+    }
+    .grok-modal-content {
+      background: #daf0de;
+      border: 1.5px solid #256b46;
+      border-radius: 9px;
+      width: 100%;
+      max-width: 520px;
+      padding: 14px;
+      box-shadow: 0 8px 24px rgba(23, 56, 36, 0.25);
+    }
+    .grok-modal-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #134e2f;
+      margin-bottom: 8px;
+    }
+    .grok-modal-textarea {
+      width: 100%;
+      height: 120px;
+      background: #ecf8ee;
+      border: 1px solid #a8cfb1;
+      border-radius: 6px;
+      padding: 8px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 11px;
+      color: #173824;
+      resize: vertical;
+      margin-bottom: 8px;
+      outline: none;
+    }
+    .grok-modal-textarea:focus {
+      border-color: #256b46;
+      box-shadow: 0 0 0 2px rgba(37, 107, 70, 0.18);
+    }
+
+    /* ========================================= */
+    /* Universal Toolbox Elements                */
+    /* ========================================= */
     .ua-top-row {
       display: flex;
       justify-content: space-between;
@@ -126,26 +580,6 @@
       accent-color: #256b46;
       cursor: pointer;
     }
-
-    /* Status Badges */
-    .ua-status-badge {
-      font-size: 11px;
-      padding: 2px 8px;
-      border-radius: 5px;
-      background: #c3e2ca;
-      color: #315c41;
-      border: 1px solid #a8cfb1;
-      font-weight: 500;
-    }
-    .ua-status-badge.active {
-      background: #256b46;
-      color: #ffffff;
-      border: 1px solid #1b5335;
-      font-weight: 600;
-      box-shadow: 0 1px 3px rgba(37, 107, 70, 0.2);
-    }
-
-    /* Controls & Selects */
     .ua-controls-row, .webrtc-controls-row {
       display: flex;
       gap: 6px;
@@ -174,36 +608,28 @@
     .select-control option {
       background: #ecf8ee;
       color: #173824;
-      font-weight: normal;
     }
-
-    /* Textarea & Inputs */
     .ua-input-row {
       margin-bottom: 8px;
     }
     .ua-textarea {
       width: 100%;
-      height: 46px;
+      height: 42px;
       background: #ecf8ee;
       border: 1px solid #a8cfb1;
       border-radius: 6px;
       color: #15472b;
-      font-family: "JetBrains Mono", Consolas, Monaco, "Courier New", monospace;
+      font-family: "JetBrains Mono", Consolas, monospace;
       font-size: 11px;
       line-height: 1.35;
       padding: 6px 8px;
       outline: none;
       resize: none;
-      transition: all 0.2s ease;
     }
     .ua-textarea:focus {
       border-color: #256b46;
       box-shadow: 0 0 0 2px rgba(37, 107, 70, 0.18);
     }
-    .ua-textarea::placeholder {
-      color: #6a9179;
-    }
-
     .ua-bottom-row {
       display: flex;
       justify-content: space-between;
@@ -217,14 +643,10 @@
       color: #386047;
       cursor: pointer;
     }
-    .checkbox-label:hover {
-      color: #173824;
-    }
     .checkbox-label input {
       accent-color: #256b46;
     }
 
-    /* WebRTC Tip Box */
     .webrtc-tip {
       font-size: 11px;
       color: #2e553c;
@@ -235,7 +657,6 @@
       border: 1px dashed #a3caa9;
     }
 
-    /* Saved Rules Panel (Collapsible) */
     .rules-panel {
       display: none;
       margin-top: 8px;
@@ -286,7 +707,6 @@
       font-size: 11px;
     }
 
-    /* Export Tabs */
     .export-tabs {
       display: flex;
       gap: 5px;
@@ -317,16 +737,14 @@
       font-weight: 700;
       box-shadow: 0 2px 4px rgba(37, 107, 70, 0.2);
     }
-
-    /* Code Preview Area */
     .preview-box {
       width: 100%;
-      height: 140px;
+      height: 120px;
       background: #ecf8ee;
       border: 1px solid #a8cfb1;
       border-radius: 6px;
       color: #13472a;
-      font-family: "JetBrains Mono", Consolas, Monaco, "Courier New", monospace;
+      font-family: "JetBrains Mono", Consolas, monospace;
       font-size: 11px;
       line-height: 1.38;
       padding: 8px 10px;
@@ -335,77 +753,40 @@
       white-space: pre;
       margin-bottom: 8px;
     }
-
-    /* Footer Action Buttons */
     .footer-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .footer-tip {
-      font-size: 11px;
-      color: #4a745b;
-    }
-    .btn-group {
+    .speed-presets-grid {
       display: flex;
-      gap: 6px;
+      flex-wrap: wrap;
+      gap: 5px;
     }
-    .btn {
-      padding: 5px 12px;
+    .speed-preset-btn {
+      flex: 1;
+      min-width: 44px;
+      text-align: center;
+      background: #cae6cf;
+      color: #2b553b;
+      border: 1px solid #a8cfb1;
+      padding: 4px 2px;
       border-radius: 5px;
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
-      border: none;
       transition: all 0.15s ease;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
     }
-    .btn-secondary {
-      background: #c3e2ca;
-      color: #174227;
-      border: 1px solid #a4cca9;
+    .speed-preset-btn:hover {
+      background: #b9debf;
+      color: #0d381f;
+      border-color: #93c09c;
     }
-    .btn-secondary:hover {
-      background: #b3d9bb;
-      border-color: #92be99;
-      color: #0c2d18;
-    }
-    .btn-primary {
+    .speed-preset-btn.active {
       background: #256b46;
       color: #ffffff;
-      font-weight: 600;
-      border: 1px solid #1e5a3a;
-      box-shadow: 0 2px 4px rgba(37, 107, 70, 0.2);
-    }
-    .btn-primary:hover {
-      background: #1b5335;
-      border-color: #144028;
-      box-shadow: 0 3px 6px rgba(27, 83, 53, 0.3);
-    }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid #9dc4a4;
-      color: #214d33;
-    }
-    .btn-outline:hover {
-      background: #cae6cf;
       border-color: #256b46;
-      color: #0d381f;
-    }
-    .btn-icon {
-      background: transparent;
-      border: none;
-      color: #dc2626;
-      cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
-      font-size: 11px;
-    }
-    .btn-icon:hover {
-      background: rgba(220, 38, 38, 0.12);
+      box-shadow: 0 1px 4px rgba(37, 107, 70, 0.25);
     }
   </style>
 </head>
@@ -415,129 +796,378 @@
   <div class="header-bar">
     <div class="main-title">
       <img src="icons/icon32.png" class="app-icon-img" alt="App Icon">
-      <span>Cookie & UA/WebRTC Switcher Pro</span>
-      <span class="badge-native">MV3 Native</span>
+      <span>Cookie & Grok Assistant Pro</span>
+      <span class="badge-native">MV3 v1.6.0</span>
     </div>
     <div class="stats-info" id="statsInfo">读取中...</div>
   </div>
 
-  <!-- Section 1: User-Agent 切换与持久化 -->
-  <div class="section-box">
-    <div class="ua-top-row">
-      <div class="scope-group">
-        <label class="radio-label">
-          <input type="radio" name="uaScope" value="site" checked>
-          <span>仅本站 (<strong id="currentDomainText">-</strong>)</span>
-        </label>
-        <label class="radio-label">
-          <input type="radio" name="uaScope" value="global">
-          <span>全局所有网站</span>
-        </label>
-      </div>
-      <span class="ua-status-badge" id="activeUaBadge">⚪ 默认浏览器 UA</span>
-    </div>
-
-    <div class="ua-controls-row">
-      <select class="select-control" id="uaPresets">
-        <option value="DEFAULT">🔄 默认/原生 Chrome 浏览器</option>
-        <optgroup label="📱 移动端设备 (iOS / Android)">
-          <option value="IPHONE_15">📱 iPhone 15 Pro (Safari / iOS 17.5)</option>
-          <option value="IPAD_PRO">📱 iPad Pro (Safari / iPadOS 17.5)</option>
-          <option value="ANDROID_PIXEL">📱 Android Google Pixel 8 (Chrome Mobile)</option>
-          <option value="ANDROID_SAMSUNG">📱 Samsung Galaxy S24 (Samsung Browser)</option>
-        </optgroup>
-        <optgroup label="💬 社交应用内置浏览器">
-          <option value="WECHAT_IOS">💬 微信内置浏览器 (iPhone iOS 17)</option>
-          <option value="WECHAT_ANDROID">💬 微信内置浏览器 (Android 14)</option>
-        </optgroup>
-        <optgroup label="💻 桌面端操作系统与浏览器">
-          <option value="MAC_SAFARI">💻 macOS Safari 17 (Desktop)</option>
-          <option value="MAC_CHROME">💻 macOS Chrome 126 (Desktop)</option>
-          <option value="WIN_EDGE">💻 Windows 11 Microsoft Edge 126</option>
-          <option value="WIN_FIREFOX">💻 Windows 11 Mozilla Firefox 127</option>
-          <option value="LINUX_CHROME">💻 Linux Ubuntu Chrome 126</option>
-        </optgroup>
-        <optgroup label="🕷️ 搜索引擎爬虫 (Spider / Bot)">
-          <option value="GOOGLE_BOT">🕷️ Googlebot (谷歌搜索引擎爬虫)</option>
-          <option value="BAIDU_SPIDER">🕷️ Baiduspider (百度搜索引擎爬虫)</option>
-          <option value="BING_BOT">🕷️ Bingbot (必应搜索引擎爬虫)</option>
-        </optgroup>
-        <option value="CUSTOM">✏️ 自定义输入 User-Agent</option>
-      </select>
-      <button class="btn btn-secondary" id="resetUaBtn">🔄 恢复默认</button>
-      <button class="btn btn-primary" id="saveUaBtn">💾 保存生效</button>
-      <button class="btn btn-outline" id="toggleRulesBtn">⚙️ 规则管理</button>
-    </div>
-
-    <div class="ua-input-row">
-      <textarea class="ua-textarea" id="customUaInput" placeholder="User-Agent 字符串 (选择预设自动填入，支持自定义修改)..."></textarea>
-    </div>
-
-    <div class="ua-bottom-row">
-      <label class="checkbox-label">
-        <input type="checkbox" id="autoReloadCheckbox" checked>
-        <span>保存/切换配置后自动刷新当前标签页</span>
-      </label>
-    </div>
-
-    <!-- Collapsible Rules Management List -->
-    <div class="rules-panel" id="rulesPanel">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-        <span style="font-weight: 600; color: #386047;">已持久化保存的网站 UA 规则</span>
-        <button class="btn btn-secondary" id="clearAllRulesBtn" style="padding: 2px 6px; font-size: 10px;">清空全部规则</button>
-      </div>
-      <div class="rules-list" id="rulesList">
-        <div class="rules-empty">暂无为特定网站配置的自定义 UA</div>
-      </div>
-    </div>
+  <!-- Navigation Tabs -->
+  <div class="nav-tabs">
+    <button class="nav-tab active" id="navTabGrok" data-target="panelGrok">
+      <span>🤖 Grok 账号助手 & 额度</span>
+    </button>
+    <button class="nav-tab" id="navTabToolbox" data-target="panelToolbox">
+      <span>🍪 通用工具箱 (倍速/画中画/UA/Cookie)</span>
+    </button>
   </div>
 
-  <!-- Section 2: WebRTC 防泄漏与隐私控制 (WebRTC Control) -->
-  <div class="section-box">
-    <div class="section-title">
-      <div style="display: flex; align-items: center; gap: 6px;">
-        <span>🛡️ WebRTC 隐私与 IP 防泄漏控制</span>
-      </div>
-      <span class="ua-status-badge active" id="webrtcStatusBadge">🟢 保护中: 禁用非代理 UDP</span>
-    </div>
-
-    <div class="webrtc-controls-row">
-      <select class="select-control" id="webrtcPolicySelect">
-        <option value="disable_non_proxied_udp">🛡️ 禁用非代理 UDP (最高隐私防漏·强制走代理)</option>
-        <option value="default_public_interface_only">🔒 仅公网接口 (隐藏局域网私有内网 IP)</option>
-        <option value="block_api">🚫 完全禁用 WebRTC API (屏蔽 RTCPeerConnection)</option>
-        <option value="default_public_and_private_interfaces">⚠️ 允许公网与私网 (默认路由)</option>
-        <option value="default">🌐 原生默认策略 (不作限制)</option>
+  <!-- ========================================= -->
+  <!-- TAB 1: Grok 账号助手 & 额度监控          -->
+  <!-- ========================================= -->
+  <div class="tab-panel active" id="panelGrok">
+    
+    <!-- 1. 顶部极速切换下拉栏 (Quick Account Switcher Bar) -->
+    <div class="grok-switcher-bar">
+      <span class="grok-switcher-label">👥 切换账号:</span>
+      <select class="grok-select-control" id="grokAccountSelect">
+        <option value="">-- 选择要切换的 Grok 账号 --</option>
       </select>
-      <button class="btn btn-primary" id="saveWebrtcBtn">💾 应用策略</button>
-    </div>
-    <div class="webrtc-tip" id="webrtcPolicyTip">
-      模式说明：强制所有 WebRTC 流量走代理转发，杜绝真实 IP 绕过代理泄露。
-    </div>
-  </div>
-
-  <!-- Section 3: Cookie & 请求头集成导出 -->
-  <div class="section-box">
-    <div class="section-title">
-      <span>🍪 Cookie & 请求头导出</span>
-      <span style="font-size: 11px; color: #4a745b;" id="kshopIndicator"></span>
+      <button class="btn btn-switch-highlight" id="grokQuickSwitchBtn">⚡ 立即切换</button>
     </div>
 
-    <div class="export-tabs">
-      <button class="export-tab active" data-tab="header">Header 字符串</button>
-      <button class="export-tab" data-tab="python">Python 脚本 (含UA)</button>
-      <button class="export-tab" data-tab="curl">cURL 命令 (含UA)</button>
-      <button class="export-tab" data-tab="json">完整 JSON (含UA)</button>
-      <button class="export-tab" data-tab="netscape">Netscape txt</button>
-    </div>
-
-    <textarea class="preview-box" id="preview" readonly></textarea>
-
-    <div class="footer-bar">
-      <span class="footer-tip">已集成当前网站 Cookie 与生效的 User-Agent</span>
+    <!-- 2. Action Toolbar -->
+    <div class="grok-top-actions">
       <div class="btn-group">
-        <button class="btn btn-secondary" id="downloadBtn">💾 导出文件</button>
-        <button class="btn btn-primary" id="copyBtn">📋 一键复制</button>
+        <button class="btn btn-primary" id="grokCaptureBtn" title="捕获当前浏览器中登录的 Grok 账号">➕ 捕获当前账号</button>
+        <button class="btn btn-secondary" id="grokRefreshQuotaBtn" title="刷新当前账号额度">🔄 刷新额度</button>
+        <button class="btn btn-outline" id="grokAddManualBtn" title="手动添加或粘贴 Cookie 导入">✏️ 手动添加</button>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-outline btn-sm" id="grokImportBtn" title="导入 JSON 账号备份">📥 导入</button>
+        <button class="btn btn-outline btn-sm" id="grokExportBtn" title="导出所有账号为 JSON 备份">📤 备份导出</button>
+        <button class="btn btn-outline btn-sm" id="grokResetSessionBtn" style="color: #b91c1c; border-color: #fca5a5;" title="彻底清理 Grok 与 x.ai 登录 Cookie 缓存 (解决死循环重定向)">🧹 清除Cookie</button>
+        <button class="btn btn-outline btn-sm" id="grokOpenWebBtn" title="打开 grok.com">🌐 打开 Grok</button>
+      </div>
+    </div>
+
+    <!-- 3. Active Account Quota Dashboard -->
+    <div class="section-box" id="grokQuotaSection">
+      <div class="grok-header-account">
+        <div class="grok-active-info">
+          <span class="grok-active-title" id="grokActiveName">未检测到已连接账号</span>
+          <span class="tier-badge" id="grokActiveTierBadge">未知</span>
+          <span class="ua-status-badge" id="grokActiveStatus">⚪ 离线/未捕获</span>
+        </div>
+        <div class="stats-info" id="grokLastUpdated">未同步额度</div>
+      </div>
+
+      <!-- 3 Models Quota Cards Grid -->
+      <div class="grok-quota-grid">
+        
+        <!-- DeepSearch Card -->
+        <div class="quota-card">
+          <div class="quota-title-row">
+            <span class="quota-title">🔍 DeepSearch</span>
+            <span style="font-size: 10px; color: #557e65;">深度搜索</span>
+          </div>
+          <div class="quota-value">
+            <span id="deepsearchRemaining">--</span>
+            <span class="quota-total">/ <span id="deepsearchTotal">--</span> 次</span>
+          </div>
+          <div class="quota-bar-wrapper">
+            <div class="quota-bar-fill" id="deepsearchBar" style="width: 100%;"></div>
+          </div>
+          <div class="quota-reset-tip" id="deepsearchReset">⏳ 等待查询</div>
+        </div>
+
+        <!-- Thinking Card -->
+        <div class="quota-card">
+          <div class="quota-title-row">
+            <span class="quota-title">🧠 Thinking</span>
+            <span style="font-size: 10px; color: #557e65;">深度思考/推理</span>
+          </div>
+          <div class="quota-value">
+            <span id="thinkRemaining">--</span>
+            <span class="quota-total">/ <span id="thinkTotal">--</span> 次</span>
+          </div>
+          <div class="quota-bar-wrapper">
+            <div class="quota-bar-fill" id="thinkBar" style="width: 100%;"></div>
+          </div>
+          <div class="quota-reset-tip" id="thinkReset">⏳ 等待查询</div>
+        </div>
+
+        <!-- Standard Card -->
+        <div class="quota-card">
+          <div class="quota-title-row">
+            <span class="quota-title">💬 Standard</span>
+            <span style="font-size: 10px; color: #557e65;">标准对话/速答</span>
+          </div>
+          <div class="quota-value">
+            <span id="standardRemaining">--</span>
+            <span class="quota-total">/ <span id="standardTotal">--</span> 次</span>
+          </div>
+          <div class="quota-bar-wrapper">
+            <div class="quota-bar-fill" id="standardBar" style="width: 100%;"></div>
+          </div>
+          <div class="quota-reset-tip" id="standardReset">⏳ 等待查询</div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 4. Grok Accounts List -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>👥 已保存账号列表 (点击任意卡片或按钮即可切换) [<strong id="grokAccountCount">0</strong>]</span>
+        <button class="btn btn-secondary btn-sm" id="grokClearAllBtn">清空列表</button>
+      </div>
+      <div class="grok-account-list" id="grokAccountsContainer">
+        <div class="accounts-empty">
+          暂无已保存账号。请先在浏览器中登录 grok.com，然后点击上方 <strong>「➕ 捕获当前账号」</strong> 或 <strong>「📥 导入」</strong> 备份数据。
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================= -->
+  <!-- TAB 2: 通用工具箱 (画中画/UA/Cookie/WebRTC) -->
+  <!-- ========================================= -->
+  <div class="tab-panel" id="panelToolbox">
+
+    <!-- Section 0: 视频画中画 (Picture-in-Picture) 控制器 -->
+    <div class="section-box">
+      <div class="section-title">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span>🎬 网页视频画中画 (Picture-in-Picture)</span>
+        </div>
+        <span class="ua-status-badge" id="pipStatusBadge">🔍 检测当前页视频...</span>
+      </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+        <button class="btn btn-primary" id="pipToggleBtn" style="flex: 2; padding: 7px 12px; font-weight: 700;" title="开启或退出画中画 (快捷键 Alt+P)">
+          🪟 开启/切换 画中画 (Alt+P)
+        </button>
+        <button class="btn btn-secondary" id="pipRefreshBtn" style="flex: 1; padding: 7px 10px;" title="重新扫描当前网页中的视频元素">
+          🔄 重新扫描
+        </button>
+        <button class="btn btn-outline" id="pipShortcutBtn" style="padding: 7px 10px;" title="自定义全局快捷键 (可在 Chrome 扩展快捷键中修改)">
+          ⌨️ 快捷键
+        </button>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #e6f6e8; padding: 6px 9px; border-radius: 6px; border: 1px dashed #a3caa9;">
+        <label class="checkbox-label" style="margin: 0; cursor: pointer;">
+          <input type="checkbox" id="autoPipCheckbox" checked>
+          <span>离开标签页时自动开启画中画 (Auto PiP)</span>
+        </label>
+        <span style="font-size: 10px; color: #4a745b;" id="pipVideoCountTip">支持 Shadow DOM 递归穿透</span>
+      </div>
+    </div>
+
+    <!-- Section 0.5: 视频/音频倍速与增强 (Speed & Audio Controller) -->
+    <div class="section-box">
+      <div class="section-title">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span>⚡ 网页媒体倍速与增强 (Speed & Audio)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span class="ua-status-badge active" id="speedCurrentBadge">1.00x</span>
+        </div>
+      </div>
+
+      <!-- Scope Selector & Pitch -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div class="scope-group">
+          <label class="radio-label">
+            <input type="radio" name="speedScope" value="global" checked>
+            <span>全局所有网站</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="speedScope" value="site">
+            <span>仅本站 (<strong id="speedDomainText">-</strong>)</span>
+          </label>
+        </div>
+        <label class="checkbox-label" style="font-size: 11px; margin: 0; cursor: pointer;">
+          <input type="checkbox" id="speedPitchCheckbox" checked>
+          <span>保持原音调 (防变尖)</span>
+        </label>
+      </div>
+
+      <!-- Preset Buttons Grid -->
+      <div class="speed-presets-grid" id="speedPresetsGrid" style="margin-bottom: 8px;">
+        <button class="speed-preset-btn" data-speed="0.5">0.5x</button>
+        <button class="speed-preset-btn" data-speed="0.75">0.75x</button>
+        <button class="speed-preset-btn active" data-speed="1.0">1.0x</button>
+        <button class="speed-preset-btn" data-speed="1.25">1.25x</button>
+        <button class="speed-preset-btn" data-speed="1.5">1.5x</button>
+        <button class="speed-preset-btn" data-speed="1.75">1.75x</button>
+        <button class="speed-preset-btn" data-speed="2.0">2.0x</button>
+        <button class="speed-preset-btn" data-speed="2.5">2.5x</button>
+        <button class="speed-preset-btn" data-speed="3.0">3.0x</button>
+        <button class="speed-preset-btn" data-speed="4.0">4.0x</button>
+      </div>
+
+      <!-- Fine-Tuning Slider Row -->
+      <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+        <button class="btn btn-secondary btn-sm" id="speedMinusBtn" style="padding: 4px 8px; font-weight: 700;">- 0.1</button>
+        <input type="range" id="speedSlider" min="0.05" max="16.0" step="0.05" value="1.0" style="flex: 1; accent-color: #256b46; cursor: pointer;">
+        <button class="btn btn-secondary btn-sm" id="speedPlusBtn" style="padding: 4px 8px; font-weight: 700;">+ 0.1</button>
+        <input type="number" id="speedInput" min="0.05" max="16.0" step="0.05" value="1.0" style="width: 52px; padding: 3px 4px; font-family: monospace; font-size: 11px; text-align: center; background: #ecf8ee; border: 1px solid #a8cfb1; border-radius: 4px; outline: none; font-weight: 600; color: #155734;">
+        <button class="btn btn-outline btn-sm" id="speedResetBtn" style="padding: 4px 8px;">重置</button>
+      </div>
+
+      <!-- Volume Booster Slider Row -->
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; background: #e6f6e8; padding: 6px 9px; border-radius: 6px; border: 1px dashed #a3caa9; margin-bottom: 6px;">
+        <span style="font-size: 11px; font-weight: 600; color: #1e5a3a; white-space: nowrap;">🔊 音量放大 (最高600%):</span>
+        <input type="range" id="volumeBoostSlider" min="100" max="600" step="10" value="100" style="flex: 1; accent-color: #256b46; cursor: pointer;">
+        <span id="volumeBoostValue" style="font-size: 11px; font-weight: 700; color: #155734; min-width: 44px; text-align: right;">100%</span>
+      </div>
+
+      <!-- Hotkeys Hint Bar & Global Toggle -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #eaf5ec; padding: 6px 9px; border-radius: 6px; border: 1px dashed #a3caa9; font-size: 10px; color: #356b46;">
+        <label class="checkbox-label" style="font-size: 11px; margin: 0; cursor: pointer; color: #1e5a3a; font-weight: 600;">
+          <input type="checkbox" id="speedHotkeysCheckbox" checked>
+          <span>启用网页快捷键</span>
+        </label>
+        <span style="color: #4a745b;" title="在输入框或评论区打字时自动智能避让">D 加速 | A 减速 | S 恢复正常 1.0x | Z/X 快退进 | C 播放</span>
+        <span id="speedMediaCountTip" style="font-weight: 600;">检测中...</span>
+      </div>
+    </div>
+
+    <!-- Section 1: User-Agent 切换与持久化 -->
+    <div class="section-box">
+      <div class="ua-top-row">
+        <div class="scope-group">
+          <label class="radio-label">
+            <input type="radio" name="uaScope" value="site" checked>
+            <span>仅本站 (<strong id="currentDomainText">-</strong>)</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="uaScope" value="global">
+            <span>全局所有网站</span>
+          </label>
+        </div>
+        <span class="ua-status-badge" id="activeUaBadge">⚪ 默认浏览器 UA</span>
+      </div>
+
+      <div class="ua-controls-row">
+        <select class="select-control" id="uaPresets">
+          <option value="DEFAULT">🔄 默认/原生 Chrome 浏览器</option>
+          <optgroup label="📱 移动端设备 (iOS / Android)">
+            <option value="IPHONE_15">📱 iPhone 15 Pro (Safari / iOS 17.5)</option>
+            <option value="IPAD_PRO">📱 iPad Pro (Safari / iPadOS 17.5)</option>
+            <option value="ANDROID_PIXEL">📱 Android Google Pixel 8 (Chrome Mobile)</option>
+            <option value="ANDROID_SAMSUNG">📱 Samsung Galaxy S24 (Samsung Browser)</option>
+          </optgroup>
+          <optgroup label="💬 社交应用内置浏览器">
+            <option value="WECHAT_IOS">💬 微信内置浏览器 (iPhone iOS 17)</option>
+            <option value="WECHAT_ANDROID">💬 微信内置浏览器 (Android 14)</option>
+          </optgroup>
+          <optgroup label="💻 桌面端操作系统与浏览器">
+            <option value="MAC_SAFARI">💻 macOS Safari 17 (Desktop)</option>
+            <option value="MAC_CHROME">💻 macOS Chrome 126 (Desktop)</option>
+            <option value="WIN_EDGE">💻 Windows 11 Microsoft Edge 126</option>
+            <option value="WIN_FIREFOX">💻 Windows 11 Mozilla Firefox 127</option>
+            <option value="LINUX_CHROME">💻 Linux Ubuntu Chrome 126</option>
+          </optgroup>
+          <optgroup label="🕷️ 搜索引擎爬虫 (Spider / Bot)">
+            <option value="GOOGLE_BOT">🕷️ Googlebot (谷歌搜索引擎爬虫)</option>
+            <option value="BAIDU_SPIDER">🕷️ Baiduspider (百度搜索引擎爬虫)</option>
+            <option value="BING_BOT">🕷️ Bingbot (必应搜索引擎爬虫)</option>
+          </optgroup>
+          <option value="CUSTOM">✏️ 自定义输入 User-Agent</option>
+        </select>
+        <button class="btn btn-secondary" id="resetUaBtn">🔄 恢复默认</button>
+        <button class="btn btn-primary" id="saveUaBtn">💾 保存生效</button>
+        <button class="btn btn-outline" id="toggleRulesBtn">⚙️ 规则管理</button>
+      </div>
+
+      <div class="ua-input-row">
+        <textarea class="ua-textarea" id="customUaInput" placeholder="User-Agent 字符串 (选择预设自动填入，支持自定义修改)..."></textarea>
+      </div>
+
+      <div class="ua-bottom-row">
+        <label class="checkbox-label">
+          <input type="checkbox" id="autoReloadCheckbox" checked>
+          <span>保存/切换配置后自动刷新当前标签页</span>
+        </label>
+      </div>
+
+      <!-- Collapsible Rules Management List -->
+      <div class="rules-panel" id="rulesPanel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-weight: 600; color: #386047;">已持久化保存的网站 UA 规则</span>
+          <button class="btn btn-secondary" id="clearAllRulesBtn" style="padding: 2px 6px; font-size: 10px;">清空全部规则</button>
+        </div>
+        <div class="rules-list" id="rulesList">
+          <div class="rules-empty">暂无为特定网站配置的自定义 UA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: WebRTC 防泄漏与隐私控制 (WebRTC Control) -->
+    <div class="section-box">
+      <div class="section-title">
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span>🛡️ WebRTC 隐私与 IP 防泄漏控制</span>
+        </div>
+        <span class="ua-status-badge active" id="webrtcStatusBadge">🟢 保护中: 禁用非代理 UDP</span>
+      </div>
+
+      <div class="webrtc-controls-row">
+        <select class="select-control" id="webrtcPolicySelect">
+          <option value="disable_non_proxied_udp">🛡️ 禁用非代理 UDP (最高隐私防漏·强制走代理)</option>
+          <option value="default_public_interface_only">🔒 仅公网接口 (隐藏局域网私有内网 IP)</option>
+          <option value="block_api">🚫 完全禁用 WebRTC API (屏蔽 RTCPeerConnection)</option>
+          <option value="default_public_and_private_interfaces">⚠️ 允许公网与私网 (默认路由)</option>
+          <option value="default">🌐 原生默认策略 (不作限制)</option>
+        </select>
+        <button class="btn btn-primary" id="saveWebrtcBtn">💾 应用策略</button>
+      </div>
+      <div class="webrtc-tip" id="webrtcPolicyTip">
+        模式说明：强制所有 WebRTC 流量走代理转发，杜绝真实 IP 绕过代理泄露。
+      </div>
+    </div>
+
+    <!-- Section 3: Cookie & 请求头集成导出 -->
+    <div class="section-box">
+      <div class="section-title">
+        <span>🍪 Cookie & 请求头导出</span>
+        <span style="font-size: 11px; color: #4a745b;" id="kshopIndicator"></span>
+      </div>
+
+      <div class="export-tabs">
+        <button class="export-tab active" data-tab="header">Header 字符串</button>
+        <button class="export-tab" data-tab="python">Python 脚本 (含UA)</button>
+        <button class="export-tab" data-tab="curl">cURL 命令 (含UA)</button>
+        <button class="export-tab" data-tab="json">完整 JSON (含UA)</button>
+        <button class="export-tab" data-tab="netscape">Netscape txt</button>
+      </div>
+
+      <textarea class="preview-box" id="preview" readonly></textarea>
+
+      <div class="footer-bar">
+        <span class="footer-tip">已集成当前网站 Cookie 与生效的 User-Agent</span>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="downloadBtn">💾 导出文件</button>
+          <button class="btn btn-primary" id="copyBtn">📋 一键复制</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================================= -->
+  <!-- Grok Modal (Import / Manual Add / Edit)   -->
+  <!-- ========================================= -->
+  <div class="grok-modal-overlay" id="grokModalOverlay">
+    <div class="grok-modal-content">
+      <div class="grok-modal-title" id="grokModalTitle">导入 Grok 账号备份</div>
+      <p style="font-size: 11px; color: #4a745b; margin-bottom: 6px;" id="grokModalDesc">
+        请在下方粘贴导出的账号备份 JSON 或单个账号 Cookie/JSON 数据：
+      </p>
+      <textarea class="grok-modal-textarea" id="grokModalInput" placeholder='粘贴 JSON 数组或对象，例如: [{"name": "主账号", "cookies": [...]}]'></textarea>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <input type="file" id="grokModalFileInput" accept=".json,.txt" style="display: none;">
+          <button class="btn btn-secondary btn-sm" id="grokModalChooseFileBtn">📁 从文件选择</button>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-secondary" id="grokModalCancelBtn">取消</button>
+          <button class="btn btn-primary" id="grokModalConfirmBtn">确认导入</button>
+        </div>
       </div>
     </div>
   </div>
