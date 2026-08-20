@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "Cookie & Grok Account Helper Pro (Grok多账号切换/额度监控 & Cookie/UA工具箱)",
-  "version": "1.6.0",
-  "description": "一键切换多个Grok账号并实时查看DeepSearch/Thinking额度，支持网页视频画中画(Alt+P)、全局0.05-16x媒体倍速与音量放大(600%)、原生高权限Cookie多格式导出、网站与全局UA伪装及WebRTC防泄露控制",
+  "name": "Cookie & Grok Account Helper Pro (含扩展管理器/Grok额度/媒体倍速/画中画/UA/Cookie)",
+  "version": "1.7.0",
+  "description": "一键管理与极速启停Chrome扩展、一键切换多个Grok账号并实时查看额度，支持网页视频画中画(Alt+P)、全局0.05-16x媒体倍速与音量放大(600%)、原生高权限Cookie导出与UA伪装",
   "permissions": [
+    "management",
     "cookies",
     "storage",
     "declarativeNetRequest",

@@ -1,16 +1,16 @@
-# Cookie & Grok Account Helper Pro (Grok多账号切换/额度监控 & Cookie/UA工具箱)
+# Cookie & Grok Account Helper Pro (含扩展管理/Grok多账号额度/倍速/画中画/Cookie/UA工具箱)
 
 <p align="center">
   <img src="icons/icon128.png" alt="Logo" width="96" height="96" />
 </p>
 
 <p align="center">
-  <strong>一款基于 Chrome Manifest V3 的 Grok 多账号一键无缝切换、DeepSearch/Thinking 实时额度监控，以及高权限 Cookie 导出、User-Agent 伪装与 WebRTC 防泄露隐私保护插件。</strong>
+  <strong>一款基于 Chrome Manifest V3 的全能浏览器助手：整合 Chrome 扩展极速管理、Grok 多账号一键无缝切换、DeepSearch/Thinking 实时额度监控、0.05-16x 网页媒体倍速与 600% 音量增强、全局画中画 (Alt+P)、高权限 Cookie 导出、User-Agent 伪装与 WebRTC 防泄露隐私保护。</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Manifest-V3-blue.svg" alt="Manifest V3" />
-  <img src="https://img.shields.io/badge/Version-1.6.0-green.svg" alt="Version" />
+  <img src="https://img.shields.io/badge/Version-1.7.0-green.svg" alt="Version" />
   <img src="https://img.shields.io/badge/License-MIT-orange.svg" alt="License" />
   <img src="https://img.shields.io/badge/Platform-Chrome%20%7C%20Edge%20%7C%20Brave-lightgrey.svg" alt="Platform" />
 </p>
@@ -18,6 +18,19 @@
 ---
 
 ## 🌟 核心特性
+
+### 0. 🧩 浏览器扩展管理器 (Extension Manager 深度整合)
+- **极速启停切换**：卡片式展示已安装的所有扩展程序，配备 iOS 质感平滑开关，毫秒级启用或停用扩展。
+- **实时关键词搜索与状态筛选**：支持按扩展名称、拼音、描述、ID 实时模糊搜索，支持「全部 / 已启用 / 已禁用」一键分类切换。
+- **快捷运维动作**：
+  - **⚙️ 扩展设置**：一键直达扩展专属配置页（`optionsUrl`）。
+  - **🌐 主页 / 商店**：一键跳转扩展官网或 Chrome Web Store 详情页。
+  - **📋 复制 ID**：一键复制扩展唯一 ID，方便开发与调试。
+  - **🗑️ 安全卸载**：支持直接发起卸载请求（带系统确认弹窗）。
+- **智能防自锁保护 (Self Protection)**：自动识别本扩展并进行高亮标记，锁定开关并禁用误卸载，杜绝意外关闭管理器自身的自杀式死锁。
+- **原生事件实时响应**：自动监听浏览器扩展的新增安装、卸载、启停事件，状态实时同步更新。
+
+---
 
 ### 1. ⚡ 网页媒体全能倍速与增强 (Global Speed 深度整合)
 - **无极倍速调节 (0.05x - 16.0x)**：支持任意精度的视频与音频播放速度调节，并提供 10 档常用快捷预设（`0.5x`, `0.75x`, `1.0x`, `1.25x`, `1.5x`, `1.75x`, `2.0x`, `2.5x`, `3.0x`, `4.0x`）。

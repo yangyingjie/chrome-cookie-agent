@@ -591,20 +591,125 @@ async function setCookieForDomain(cookie) {
   }
 }
 
+// 全面拉取 Grok 3 类实时额度（双通道：标签页注入代理 + Background 请求）
 async function fetchGrokRateLimits() {
-  const res = await fetch('https://grok.com/rest/rate-limits', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({ requestKind: 'DEFAULT' })
-  });
+  const result = {
+    lastUpdated: Date.now(),
+    deepsearch: null,
+    thinking: null,
+    standard: null
+  };
 
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  const kinds = [
+    { key: 'standard', kind: 'DEFAULT' },
+    { key: 'deepsearch', kind: 'DEEPSEARCH' },
+    { key: 'thinking', kind: 'REASONING' }
+  ];
+
+  // 通道 1: 优先尝试通过已打开的 Grok 标签页执行（100% 原生同源 Session 与 Cookie）
+  try {
+    const grokTabs = await chrome.tabs.query({ url: '*://*.grok.com/*' });
+    if (grokTabs && grokTabs.length > 0) {
+      const tabId = grokTabs[0].id;
+      const results = await chrome.scripting.executeScript({
+        target: { tabId },
+        func: async () => {
+          const kinds = [
+            { key: 'standard', kind: 'DEFAULT' },
+            { key: 'deepsearch', kind: 'DEEPSEARCH' },
+            { key: 'thinking', kind: 'REASONING' }
+          ];
+          const pageRes = {};
+          for (const item of kinds) {
+            try {
+              const r = await fetch('/rest/rate-limits', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ requestKind: item.kind, modelName: 'grok-3' })
+              });
+              if (r.ok) {
+                pageRes[item.key] = await r.json();
+              }
+            } catch (e) {}
+          }
+          return pageRes;
+        }
+      });
+
+      if (results && results[0] && results[0].result) {
+        const pageData = results[0].result;
+        for (const item of kinds) {
+          if (pageData[item.key]) {
+            const d = pageData[item.key];
+            result[item.key] = {
+              remaining: typeof d.remainingQueries === 'number' ? d.remainingQueries : (typeof d.remaining === 'number' ? d.remaining : null),
+              total: typeof d.totalQueries === 'number' ? d.totalQueries : (typeof d.limit === 'number' ? d.limit : null),
+              resetTime: d.resetTime || null,
+              windowSeconds: d.windowSizeSeconds || d.windowSeconds || null
+            };
+          }
+        }
+        if (result.standard || result.deepsearch || result.thinking) {
+          return result;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Grok Quota] 标签页通道获取失败，切换至 Background 通道:', e);
   }
 
-  return await res.json();
+  // 通道 2: Background 服务工作者直接凭证请求
+  const promises = kinds.map(async item => {
+    try {
+      const res = await fetch('https://grok.com/rest/rate-limits', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': 'https://grok.com',
+          'Referer': 'https://grok.com/'
+        },
+        body: JSON.stringify({ requestKind: item.kind, modelName: 'grok-3' })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        result[item.key] = {
+          remaining: typeof data.remainingQueries === 'number' ? data.remainingQueries : (typeof data.remaining === 'number' ? data.remaining : null),
+          total: typeof data.totalQueries === 'number' ? data.totalQueries : (typeof data.limit === 'number' ? data.limit : null),
+          resetTime: data.resetTime || null,
+          windowSeconds: data.windowSizeSeconds || data.windowSeconds || null
+        };
+      } else {
+        // Fallback: 尝试不传 modelName
+        const res2 = await fetch('https://grok.com/rest/rate-limits', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Origin': 'https://grok.com',
+            'Referer': 'https://grok.com/'
+          },
+          body: JSON.stringify({ requestKind: item.kind })
+        });
+        if (res2.ok) {
+          const data2 = await res2.json();
+          result[item.key] = {
+            remaining: typeof data2.remainingQueries === 'number' ? data2.remainingQueries : (typeof data2.remaining === 'number' ? data2.remaining : null),
+            total: typeof data2.totalQueries === 'number' ? data2.totalQueries : (typeof data2.limit === 'number' ? data2.limit : null),
+            resetTime: data2.resetTime || null,
+            windowSeconds: data2.windowSizeSeconds || data2.windowSeconds || null
+          };
+        }
+      }
+    } catch (e) {
+      console.warn(`[Grok Quota] 拉取 ${item.kind} 额度失败:`, e);
+    }
+  });
+
+  await Promise.all(promises);
+  return result;
 }
 
