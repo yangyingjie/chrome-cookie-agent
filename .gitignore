@@ -20,3 +20,7 @@ node_modules/
 
 # AI Conversation Logs
 ai_ask/
+
+# Local Test Scripts
+test/
+test_*.js
