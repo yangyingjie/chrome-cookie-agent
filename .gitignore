@@ -17,3 +17,6 @@ yarn-error.log*
 
 # Node modules / package files (if any in future)
 node_modules/
+
+# AI Conversation Logs
+ai_ask/
