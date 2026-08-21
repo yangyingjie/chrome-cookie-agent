@@ -24,3 +24,9 @@ ai_ask/
 # Local Test Scripts
 test/
 test_*.js
+
+.agent/
+.agents/
+PROJECT.md
+TEST_INFRA.md
+TEST_READY.md

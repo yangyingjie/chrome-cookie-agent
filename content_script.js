@@ -75,10 +75,12 @@
       }
     });
 
-    // 初始化 Auto-PiP 设置 (默认开启 true)
-    chrome.storage.local.get(['autoPipEnabled'], (res) => {
+    // 初始化 Auto-PiP 与 Always-On-Top 快捷键设置 (默认开启 true)
+    let aotHotkeysEnabled = true;
+    chrome.storage.local.get(['autoPipEnabled', 'aotHotkeysEnabled'], (res) => {
       if (chrome.runtime.lastError) return;
       const isAutoPipOn = (res && res.autoPipEnabled !== undefined) ? Boolean(res.autoPipEnabled) : true;
+      aotHotkeysEnabled = (res && res.aotHotkeysEnabled !== undefined) ? Boolean(res.aotHotkeysEnabled) : true;
       if (typeof window !== 'undefined' && window.__CHROME_PIP_ENGINE__) {
         window.__CHROME_PIP_ENGINE__.initAutoPip(isAutoPipOn);
       }
@@ -131,6 +133,9 @@
       if (areaName === 'local') {
         if (changes.autoPipEnabled && typeof window !== 'undefined' && window.__CHROME_PIP_ENGINE__) {
           window.__CHROME_PIP_ENGINE__.initAutoPip(Boolean(changes.autoPipEnabled.newValue));
+        }
+        if (changes.aotHotkeysEnabled !== undefined) {
+          aotHotkeysEnabled = Boolean(changes.aotHotkeysEnabled.newValue);
         }
         if (changes.speedHotkeysEnabled && typeof window !== 'undefined' && window.__CHROME_SPEED_ENGINE__) {
           window.__CHROME_SPEED_ENGINE__.setupHotkeys(Boolean(changes.speedHotkeysEnabled.newValue));
@@ -245,10 +250,55 @@
         }
         return false;
       }
+
+      // 3. Always-On-Top 置顶悬浮小窗指令
+      if (request.type === 'GET_AOT_STATUS' || request.type === 'CHECK_AOT_STATUS' || request.type === 'QUERY_AOT_STATUS') {
+        if (typeof window !== 'undefined' && window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+          sendResponse(window.__CHROME_ALWAYS_ON_TOP_ENGINE__.getAotStatus());
+        } else {
+          sendResponse({ supported: false, active: false, mode: 'none', dimensions: { width: 640, height: 360 }, currentUrl: '' });
+        }
+        return false;
+      }
+
+      if (request.type === 'TOGGLE_ALWAYS_ON_TOP' || request.type === 'OPEN_ALWAYS_ON_TOP') {
+        if (typeof window !== 'undefined' && window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+          const aotEngine = window.__CHROME_ALWAYS_ON_TOP_ENGINE__;
+          const status = aotEngine.getAotStatus();
+          if (request.type === 'TOGGLE_ALWAYS_ON_TOP' && status.active) {
+            const closed = aotEngine.closeAlwaysOnTop();
+            sendResponse({ success: true, action: 'closed', closed });
+            return false;
+          }
+
+          aotEngine.openAlwaysOnTop(request.options || request)
+            .then(result => {
+              sendResponse({ success: true, action: 'opened', mode: (result && result.mode) ? result.mode : 'docpip' });
+            })
+            .catch(err => {
+              sendResponse({ success: false, error: err.name || 'AOT_ERROR', message: err.message });
+            });
+          return true; // 异步响应
+        } else {
+          sendResponse({ success: false, error: 'ENGINE_NOT_LOADED', message: '置顶小窗引擎未在页面载入' });
+          return false;
+        }
+      }
+
+      if (request.type === 'CLOSE_ALWAYS_ON_TOP') {
+        if (typeof window !== 'undefined' && window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+          const closed = window.__CHROME_ALWAYS_ON_TOP_ENGINE__.closeAlwaysOnTop();
+          sendResponse({ success: true, closed });
+        } else {
+          sendResponse({ success: false, error: 'ENGINE_NOT_LOADED' });
+        }
+        return false;
+      }
     });
 
-    // 页面内直接监听 Alt+P (Mac: Option+P) 快捷键，具备直接的用户手势激活权限 (User Gesture)
+    // 页面内直接监听快捷键，具备直接的用户手势激活权限 (User Gesture)
     window.addEventListener('keydown', async (e) => {
+      // 1. Alt+P (Mac: Option+P) -> 视频画中画
       if (e.altKey && (e.code === 'KeyP' || e.key === 'p' || e.key === 'P')) {
         const activeEl = document.activeElement;
         const tag = activeEl ? activeEl.tagName.toLowerCase() : '';
@@ -259,6 +309,26 @@
         e.stopPropagation();
         if (typeof window !== 'undefined' && window.__CHROME_PIP_ENGINE__) {
           await window.__CHROME_PIP_ENGINE__.togglePictureInPicture();
+        }
+      }
+
+      // 2. Alt+W (Mac: Option+W) -> 网页置顶小窗 (Always On Top)
+      if (aotHotkeysEnabled && e.altKey && (e.code === 'KeyW' || e.key === 'w' || e.key === 'W')) {
+        const activeEl = document.activeElement;
+        const tag = activeEl ? activeEl.tagName.toLowerCase() : '';
+        if (tag === 'input' || tag === 'textarea' || (activeEl && activeEl.isContentEditable)) {
+          return;
+        }
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window !== 'undefined' && window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+          const aotEngine = window.__CHROME_ALWAYS_ON_TOP_ENGINE__;
+          const status = aotEngine.getAotStatus();
+          if (status.active) {
+            aotEngine.closeAlwaysOnTop();
+          } else {
+            await aotEngine.openAlwaysOnTop({ targetUrl: window.location.href });
+          }
         }
       }
     }, true);

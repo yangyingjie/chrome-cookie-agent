@@ -22,12 +22,21 @@
     "<all_urls>"
   ],
   "commands": {
+    "toggle-always-on-top": {
+      "suggested_key": {
+        "default": "Alt+W",
+        "mac": "Alt+W"
+      },
+      "description": "开启或退出当前网页置顶小窗 (Always On Top Window)",
+      "global": true
+    },
     "toggle-pip": {
       "suggested_key": {
         "default": "Alt+P",
         "mac": "Alt+P"
       },
-      "description": "开启或退出当前网页视频画中画模式 (Picture-in-Picture)"
+      "description": "开启或退出当前网页视频画中画模式 (Picture-in-Picture)",
+      "global": true
     }
   },
   "background": {
@@ -36,7 +45,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["speed_engine.js", "pip_engine.js", "content_script.js"],
+      "js": ["speed_engine.js", "pip_engine.js", "always_on_top_engine.js", "content_script.js"],
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true

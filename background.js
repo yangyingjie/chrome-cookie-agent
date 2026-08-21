@@ -39,6 +39,27 @@ async function syncDeclarativeRules() {
     const addRules = [];
     let ruleIdCounter = 1;
 
+    // 0. Always-On-Top 网页置顶浮窗 iframe 跨域与防嵌套解除规则 (优先级 100)
+    // 移除 sub_frame (iframe) 响应头中的 X-Frame-Options, Frame-Options 与 Content-Security-Policy，
+    // 彻底解决 Gemini, ChatGPT, YouTube, Bilibili, Google 等各大网站拒绝 iframe 连接请求 ("拒绝了我们的连接请求") 的安全策略限制
+    addRules.push({
+      id: ruleIdCounter++,
+      priority: 100,
+      action: {
+        type: 'modifyHeaders',
+        responseHeaders: [
+          { header: 'X-Frame-Options', operation: 'remove' },
+          { header: 'Frame-Options', operation: 'remove' },
+          { header: 'Content-Security-Policy', operation: 'remove' },
+          { header: 'X-Content-Security-Policy', operation: 'remove' }
+        ]
+      },
+      condition: {
+        urlFilter: '*',
+        resourceTypes: ['sub_frame']
+      }
+    });
+
     // 1. 全局 User-Agent 规则 (优先级 1)
     if (globalUa.enabled && globalUa.ua && globalUa.ua.trim()) {
       addRules.push({
@@ -124,37 +145,65 @@ async function syncWebrtcPolicy() {
   }
 }
 
+// 注册右键快捷菜单 (包括 Always-On-Top 置顶与 Video PiP)
+function registerContextMenus() {
+  if (!chrome.contextMenus) return;
+  try {
+    chrome.contextMenus.removeAll(() => {
+      // 1. 在置顶小窗打开链接
+      chrome.contextMenus.create({
+        id: 'context_always_on_top_link',
+        title: '📌 在置顶小窗打开链接',
+        contexts: ['link']
+      });
+
+      // 2. 置顶当前网页
+      chrome.contextMenus.create({
+        id: 'context_always_on_top_page',
+        title: '🪟 置顶当前网页 (Always On Top) (Alt+W)',
+        contexts: ['page', 'frame', 'selection', 'editable']
+      });
+
+      // 3. 视频画中画
+      chrome.contextMenus.create({
+        id: 'context_toggle_pip',
+        title: '🪟 开启/切换 画中画 (Alt+P)',
+        contexts: ['video', 'page', 'frame']
+      });
+    });
+  } catch (e) {
+    console.warn('[ContextMenus] Registration failed:', e);
+  }
+}
+
 // 插件安装 / 启动时自动同步规则与策略
 chrome.runtime.onInstalled.addListener(() => {
   syncDeclarativeRules();
   syncWebrtcPolicy();
+  registerContextMenus();
 
-  // 默认启用自动画中画 (Auto-PiP) 与倍速快捷键
-  chrome.storage.local.get(['autoPipEnabled', 'speedHotkeysEnabled'], (res) => {
+  // 默认启用自动画中画 (Auto-PiP)、Always-On-Top 置顶快捷键与倍速快捷键
+  chrome.storage.local.get(['autoPipEnabled', 'speedHotkeysEnabled', 'aotHotkeysEnabled'], (res) => {
     const toSet = {};
     if (res.autoPipEnabled === undefined) toSet.autoPipEnabled = true;
     if (res.speedHotkeysEnabled === undefined) toSet.speedHotkeysEnabled = true;
+    if (res.aotHotkeysEnabled === undefined) toSet.aotHotkeysEnabled = true;
     if (Object.keys(toSet).length > 0) {
       chrome.storage.local.set(toSet);
     }
   });
-
-  // 注册画中画右键快捷菜单
-  try {
-    chrome.contextMenus.create({
-      id: 'context_toggle_pip',
-      title: '🪟 开启/切换 画中画 (Alt+P)',
-      contexts: ['video', 'page', 'frame']
-    });
-  } catch (e) {
-    console.warn('[PiP] Context menu registration:', e);
-  }
 });
 
 chrome.runtime.onStartup.addListener(() => {
   syncDeclarativeRules();
   syncWebrtcPolicy();
+  registerContextMenus();
 });
+
+// 初始化后台规则与右键菜单
+syncDeclarativeRules();
+syncWebrtcPolicy();
+registerContextMenus();
 
 // 监听 storage 变更自动同步规则
 chrome.storage.onChanged.addListener((changes, areaName) => {
@@ -368,9 +417,123 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })();
     return true;
   }
+
+  // ==========================================
+  // Always-On-Top 置顶悬浮小窗后台调度
+  // ==========================================
+  if (message.type === 'OPEN_ALWAYS_ON_TOP') {
+    (async () => {
+      try {
+        let tabId = message.tabId;
+        if (!tabId) {
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          tabId = activeTab ? activeTab.id : null;
+        }
+        let targetUrl = message.targetUrl || message.url;
+        if (!targetUrl && tabId) {
+          const tab = await chrome.tabs.get(tabId).catch(() => null);
+          targetUrl = tab ? tab.url : '';
+        }
+        const options = {
+          preset: message.preset,
+          width: message.width,
+          height: message.height,
+          mode: message.mode,
+          targetUrl: targetUrl,
+          openerTabId: tabId
+        };
+        const result = await executeAotOpenOnTab(tabId, targetUrl, options);
+        sendResponse(result);
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'TOGGLE_ALWAYS_ON_TOP' || message.type === 'TOGGLE_AOT_ON_ACTIVE_TAB') {
+    (async () => {
+      try {
+        let tabId = message.tabId;
+        if (!tabId) {
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          tabId = activeTab ? activeTab.id : null;
+        }
+        const result = await executeAotToggleOnTab(tabId);
+        sendResponse(result);
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'QUERY_AOT_STATUS' || message.type === 'GET_AOT_STATUS') {
+    (async () => {
+      try {
+        let tabId = message.tabId;
+        if (!tabId) {
+          const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+          tabId = activeTab ? activeTab.id : null;
+        }
+        const status = await getTabAotStatus(tabId);
+        sendResponse(status);
+      } catch (err) {
+        sendResponse({ supported: false, active: false, mode: 'none', error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'RESTORE_AOT_TO_TAB') {
+    (async () => {
+      try {
+        const { tabId, url } = message;
+        if (tabId) {
+          try {
+            await chrome.tabs.update(tabId, { active: true, ...(url ? { url } : {}) });
+            const tab = await chrome.tabs.get(tabId);
+            if (tab && tab.windowId) {
+              await chrome.windows.update(tab.windowId, { focused: true });
+            }
+            sendResponse({ success: true, restored: true, tabId });
+            return;
+          } catch (e) {
+            // Tab may no longer exist
+          }
+        }
+        if (url) {
+          const newTab = await chrome.tabs.create({ url, active: true });
+          sendResponse({ success: true, createdNew: true, tabId: newTab.id });
+        } else {
+          sendResponse({ success: false, error: 'NO_URL_PROVIDED' });
+        }
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
+
+  if (message.type === 'OPEN_ALWAYS_ON_TOP_FALLBACK') {
+    (async () => {
+      try {
+        const result = await openFallbackWindow(message.url, {
+          width: message.width,
+          height: message.height,
+          left: message.left,
+          top: message.top
+        });
+        sendResponse(result);
+      } catch (err) {
+        sendResponse({ success: false, error: err.message });
+      }
+    })();
+    return true;
+  }
 });
 
-// 监听全局快捷键 (如 Alt+P / Option+P)
+// 监听全局快捷键 (如 Alt+P / Option+P / Alt+W)
 if (chrome.commands && chrome.commands.onCommand) {
   chrome.commands.onCommand.addListener(async (command) => {
     if (command === 'toggle-pip') {
@@ -382,6 +545,16 @@ if (chrome.commands && chrome.commands.onCommand) {
         }
       } catch (e) {
         console.error('[PiP Command Error]', e);
+      }
+    } else if (command === 'toggle-always-on-top') {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab && tab.id) {
+          const result = await executeAotToggleOnTab(tab.id);
+          console.log('[AOT Command]', result);
+        }
+      } catch (e) {
+        console.error('[AOT Command Error]', e);
       }
     }
   });
@@ -396,6 +569,18 @@ if (chrome.contextMenus && chrome.contextMenus.onClicked) {
         const result = await executePipToggleOnTab(targetTabId);
         console.log('[PiP ContextMenu]', result);
       }
+    } else if (info.menuItemId === 'context_always_on_top_link') {
+      const targetUrl = info.linkUrl;
+      const targetTabId = (tab && tab.id) ? tab.id : (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
+      if (targetUrl) {
+        const result = await executeAotOpenOnTab(targetTabId, targetUrl);
+        console.log('[AOT Link ContextMenu]', result);
+      }
+    } else if (info.menuItemId === 'context_always_on_top_page') {
+      const targetUrl = (tab && tab.url) ? tab.url : (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.url;
+      const targetTabId = (tab && tab.id) ? tab.id : (await chrome.tabs.query({ active: true, currentWindow: true }))[0]?.id;
+      const result = await executeAotOpenOnTab(targetTabId, targetUrl);
+      console.log('[AOT Page ContextMenu]', result);
     }
   });
 }
@@ -510,6 +695,159 @@ async function getTabPipStatus(tabId) {
   } catch (e) {}
 
   return { supported: false, totalVideos: 0, playingVideos: 0, isInPip: false };
+}
+
+// ==========================================
+// Always-On-Top 核心执行与回退引擎
+// ==========================================
+
+async function openFallbackWindow(url, options = {}) {
+  try {
+    const finalUrl = url || 'https://www.google.com';
+    const width = options.width || 640;
+    const height = options.height || 360;
+    const createData = {
+      url: finalUrl,
+      type: 'popup',
+      width: Math.max(200, Math.min(3840, width)),
+      height: Math.max(150, Math.min(2160, height)),
+      focused: true
+    };
+    if (typeof options.left === 'number') createData.left = Math.round(options.left);
+    if (typeof options.top === 'number') createData.top = Math.round(options.top);
+
+    const win = await chrome.windows.create(createData);
+    return { success: true, mode: 'popup', windowId: win.id };
+  } catch (err) {
+    console.error('[AOT Fallback] Error creating popup window:', err);
+    return { success: false, error: err.message };
+  }
+}
+
+async function executeAotOpenOnTab(tabId, targetUrl, options = {}) {
+  const urlToOpen = targetUrl || '';
+  if (isRestrictedTabUrl(urlToOpen) || !tabId) {
+    return await openFallbackWindow(urlToOpen, options);
+  }
+
+  try {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab && isRestrictedTabUrl(tab.url)) {
+      return await openFallbackWindow(urlToOpen || tab.url, options);
+    }
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: async (url, opts) => {
+        if (window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+          try {
+            const res = await window.__CHROME_ALWAYS_ON_TOP_ENGINE__.openAlwaysOnTop({
+              targetUrl: url || window.location.href,
+              ...opts
+            });
+            return { success: true, mode: (res && res.mode) ? res.mode : 'docpip' };
+          } catch (e) {
+            return { success: false, error: e.name || 'AOT_ERROR', message: e.message };
+          }
+        }
+        return { success: false, error: 'ENGINE_NOT_LOADED' };
+      },
+      args: [urlToOpen, options]
+    });
+
+    if (results && results[0] && results[0].result && results[0].result.success !== false) {
+      return results[0].result;
+    }
+    return await openFallbackWindow(urlToOpen || (tab ? tab.url : ''), options);
+  } catch (injectErr) {
+    console.warn('[AOT Open] Injection failed, falling back to popup:', injectErr);
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    return await openFallbackWindow(urlToOpen || (tab ? tab.url : ''), options);
+  }
+}
+
+async function executeAotToggleOnTab(tabId) {
+  if (!tabId) {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    tabId = activeTab ? activeTab.id : null;
+  }
+  if (!tabId) return { success: false, error: 'NO_ACTIVE_TAB' };
+
+  try {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab && isRestrictedTabUrl(tab.url)) {
+      return await openFallbackWindow(tab.url);
+    }
+
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: async () => {
+        if (window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+          const aot = window.__CHROME_ALWAYS_ON_TOP_ENGINE__;
+          const status = aot.getAotStatus();
+          if (status.active) {
+            const closed = aot.closeAlwaysOnTop();
+            return { success: true, action: 'closed', closed };
+          } else {
+            const res = await aot.openAlwaysOnTop({ targetUrl: window.location.href });
+            return { success: true, action: 'opened', mode: (res && res.mode) ? res.mode : 'docpip' };
+          }
+        }
+        return { success: false, error: 'ENGINE_NOT_LOADED' };
+      }
+    });
+
+    if (results && results[0] && results[0].result && results[0].result.success !== false) {
+      return results[0].result;
+    }
+    return await openFallbackWindow(tab ? tab.url : '');
+  } catch (err) {
+    console.warn('[AOT Toggle] Injection failed, falling back to popup:', err);
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    return await openFallbackWindow(tab ? tab.url : '');
+  }
+}
+
+async function getTabAotStatus(tabId) {
+  if (!tabId) return { supported: false, active: false, mode: 'none' };
+
+  try {
+    const tab = await chrome.tabs.get(tabId).catch(() => null);
+    if (tab && isRestrictedTabUrl(tab.url)) {
+      return {
+        supported: false,
+        active: false,
+        mode: 'none',
+        isRestricted: true,
+        message: '系统页面不支持置顶悬浮小窗'
+      };
+    }
+  } catch (e) {}
+
+  try {
+    const res = await chrome.tabs.sendMessage(tabId, { type: 'QUERY_AOT_STATUS' });
+    if (res && res.supported !== undefined) {
+      return res;
+    }
+  } catch (e) {}
+
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => {
+        if (window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+          return window.__CHROME_ALWAYS_ON_TOP_ENGINE__.getAotStatus();
+        }
+        return { supported: false, active: false, mode: 'none' };
+      }
+    });
+
+    if (results && results[0] && results[0].result) {
+      return results[0].result;
+    }
+  } catch (e) {}
+
+  return { supported: false, active: false, mode: 'none' };
 }
 
 // Grok Cookie 与 API 工具函数

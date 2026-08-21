@@ -134,6 +134,31 @@ const rulesPanel = document.getElementById('rulesPanel');
 const rulesListContainer = document.getElementById('rulesList');
 const clearAllRulesBtn = document.getElementById('clearAllRulesBtn');
 
+// Always-On-Top Window (网页置顶小窗) DOM
+const aotStatusBadge = document.getElementById('aotStatusBadge');
+const btnAotCurrentTab = document.getElementById('btnAotCurrentTab');
+const aotShortcutBtn = document.getElementById('aotShortcutBtn');
+const aotHotkeysCheckbox = document.getElementById('aotHotkeysCheckbox');
+const aotTargetUrl = document.getElementById('aotTargetUrl');
+const btnAotOpenUrl = document.getElementById('btnAotOpenUrl');
+const aotPresetsGrid = document.getElementById('aotPresetsGrid');
+const aotPresetBtns = document.querySelectorAll('.aot-preset-btn');
+const aotCustomWidth = document.getElementById('aotCustomWidth');
+const aotCustomHeight = document.getElementById('aotCustomHeight');
+const aotTipText = document.getElementById('aotTipText');
+
+const AOT_PRESET_MAP = {
+  '360p': { width: 480, height: 270, label: '360p (480x270)' },
+  '480p': { width: 640, height: 360, label: '480p (640x360)' },
+  '720p': { width: 1280, height: 720, label: '720p (1280x720)' },
+  'portrait': { width: 375, height: 667, label: '📱 竖屏 (375x667)' }
+};
+
+let currentAotPreset = '480p';
+let currentAotWidth = 640;
+let currentAotHeight = 360;
+let currentAotMode = 'docpip';
+
 // Picture-in-Picture (画中画) DOM
 const pipStatusBadge = document.getElementById('pipStatusBadge');
 const pipToggleBtn = document.getElementById('pipToggleBtn');
@@ -1658,6 +1683,319 @@ function isRestrictedUrl(url) {
 }
 
 // ==========================================
+// 6.4 网页置顶小窗 (Always On Top Window) 控制逻辑
+// ==========================================
+function renderAotStatus(status) {
+  if (!aotStatusBadge) return;
+
+  if (isRestrictedUrl(currentUrl) || (status && status.isRestricted)) {
+    aotStatusBadge.textContent = '⚪ 受限页 (回退弹窗)';
+    aotStatusBadge.className = 'ua-status-badge';
+    if (btnAotCurrentTab) btnAotCurrentTab.innerHTML = '🪟 独立小窗打开 (Alt+W)';
+    if (aotTipText) aotTipText.textContent = '受限页面将以精简独立窗口打开';
+    return;
+  }
+
+  if (!status || status.error) {
+    aotStatusBadge.textContent = '⚪ 就绪 (系统级置顶)';
+    aotStatusBadge.className = 'ua-status-badge';
+    if (btnAotCurrentTab) btnAotCurrentTab.innerHTML = '🪟 置顶当前网页 (Alt+W)';
+    if (aotTipText) aotTipText.textContent = '系统级置顶 / 自动回退';
+    return;
+  }
+
+  if (status.active) {
+    const dims = status.dimensions ? `${status.dimensions.width}×${status.dimensions.height}` : `${currentAotWidth}×${currentAotHeight}`;
+    aotStatusBadge.textContent = `🟢 置顶中 (${dims})`;
+    aotStatusBadge.className = 'ua-status-badge active';
+    if (btnAotCurrentTab) btnAotCurrentTab.innerHTML = '⏹️ 退出当前置顶 (Alt+W)';
+    if (aotTipText) {
+      aotTipText.textContent = status.mode === 'popup' ? '⚡ 独立弹窗运行中' : '⚡ Document PiP 顶层置顶中';
+    }
+  } else {
+    aotStatusBadge.textContent = status.supported !== false ? '⚪ 就绪 (支持系统置顶)' : '⚪ 就绪 (独立弹窗)';
+    aotStatusBadge.className = 'ua-status-badge';
+    if (btnAotCurrentTab) btnAotCurrentTab.innerHTML = '🪟 置顶当前网页 (Alt+W)';
+    if (aotTipText) aotTipText.textContent = '系统级置顶 / 自动回退';
+  }
+}
+
+async function loadAotSettingsAndStatus() {
+  try {
+    // 1. 从 local storage 读取配置
+    const store = await chrome.storage.local.get(['aotPreset', 'aotCustomWidth', 'aotCustomHeight', 'aotPreferredMode', 'aotHotkeysEnabled']);
+    currentAotPreset = store.aotPreset || '480p';
+    currentAotWidth = parseInt(store.aotCustomWidth, 10) || 640;
+    currentAotHeight = parseInt(store.aotCustomHeight, 10) || 360;
+    currentAotMode = store.aotPreferredMode || 'docpip';
+
+    if (aotHotkeysCheckbox) {
+      aotHotkeysCheckbox.checked = (store.aotHotkeysEnabled !== undefined) ? Boolean(store.aotHotkeysEnabled) : true;
+    }
+
+    // 2. 如果是预设模式，对齐预设标准尺寸
+    if (AOT_PRESET_MAP[currentAotPreset]) {
+      currentAotWidth = AOT_PRESET_MAP[currentAotPreset].width;
+      currentAotHeight = AOT_PRESET_MAP[currentAotPreset].height;
+    }
+
+    // 3. 更新输入框与预设按钮高亮
+    if (aotCustomWidth) aotCustomWidth.value = currentAotWidth;
+    if (aotCustomHeight) aotCustomHeight.value = currentAotHeight;
+
+    if (aotPresetBtns) {
+      aotPresetBtns.forEach(btn => {
+        if (btn.dataset.preset === currentAotPreset) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    // 4. 如果是受限页面，直接展示提示
+    if (isRestrictedUrl(currentUrl)) {
+      renderAotStatus({ isRestricted: true, active: false, supported: false });
+      return;
+    }
+
+    // 5. 动态查询当前激活标签页的 AOT 置顶状态
+    if (activeTabInfo && activeTabInfo.id) {
+      try {
+        const results = await chrome.scripting.executeScript({
+          target: { tabId: activeTabInfo.id },
+          func: () => {
+            if (window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+              return window.__CHROME_ALWAYS_ON_TOP_ENGINE__.getAotStatus();
+            }
+            return {
+              supported: typeof window !== 'undefined' && 'documentPictureInPicture' in window,
+              active: false,
+              mode: 'none'
+            };
+          }
+        }).catch(() => null);
+
+        if (results && results[0] && results[0].result) {
+          renderAotStatus(results[0].result);
+        } else {
+          const bgStatus = await chrome.runtime.sendMessage({ type: 'QUERY_AOT_STATUS', tabId: activeTabInfo.id }).catch(() => null);
+          renderAotStatus(bgStatus || { supported: true, active: false });
+        }
+      } catch (e) {
+        renderAotStatus({ supported: true, active: false });
+      }
+    }
+  } catch (err) {
+    console.warn('[AOT Popup] load status failed:', err);
+  }
+}
+
+// 绑定预设按钮点击事件
+if (aotPresetBtns) {
+  aotPresetBtns.forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const preset = btn.dataset.preset;
+      currentAotPreset = preset;
+
+      aotPresetBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      if (AOT_PRESET_MAP[preset]) {
+        currentAotWidth = AOT_PRESET_MAP[preset].width;
+        currentAotHeight = AOT_PRESET_MAP[preset].height;
+        if (aotCustomWidth) aotCustomWidth.value = currentAotWidth;
+        if (aotCustomHeight) aotCustomHeight.value = currentAotHeight;
+      }
+
+      await chrome.storage.local.set({
+        aotPreset: currentAotPreset,
+        aotCustomWidth: currentAotWidth,
+        aotCustomHeight: currentAotHeight
+      });
+    });
+  });
+}
+
+// 绑定自定义尺寸输入事件
+async function handleAotCustomDimensionChange() {
+  let w = parseInt(aotCustomWidth ? aotCustomWidth.value : '640', 10);
+  let h = parseInt(aotCustomHeight ? aotCustomHeight.value : '360', 10);
+
+  if (isNaN(w) || w < 200) w = 200;
+  if (w > 3840) w = 3840;
+  if (isNaN(h) || h < 150) h = 150;
+  if (h > 2160) h = 2160;
+
+  currentAotWidth = w;
+  currentAotHeight = h;
+  currentAotPreset = 'custom';
+
+  if (aotPresetBtns) {
+    aotPresetBtns.forEach(b => {
+      if (b.dataset.preset === 'custom') {
+        b.classList.add('active');
+      } else {
+        b.classList.remove('active');
+      }
+    });
+  }
+
+  await chrome.storage.local.set({
+    aotPreset: 'custom',
+    aotCustomWidth: currentAotWidth,
+    aotCustomHeight: currentAotHeight
+  });
+}
+
+if (aotCustomWidth) aotCustomWidth.addEventListener('change', handleAotCustomDimensionChange);
+if (aotCustomHeight) aotCustomHeight.addEventListener('change', handleAotCustomDimensionChange);
+
+// 绑定置顶当前网页按钮
+if (btnAotCurrentTab) {
+  btnAotCurrentTab.addEventListener('click', async () => {
+    if (!activeTabInfo || !activeTabInfo.id) {
+      alert('无法在当前页面操作置顶小窗');
+      return;
+    }
+
+    const origHtml = btnAotCurrentTab.innerHTML;
+    btnAotCurrentTab.disabled = true;
+    btnAotCurrentTab.innerHTML = '⏳ 正在处理...';
+
+    try {
+      if (isRestrictedUrl(currentUrl)) {
+        await chrome.windows.create({
+          url: currentUrl,
+          type: 'popup',
+          width: currentAotWidth,
+          height: currentAotHeight,
+          focused: true
+        });
+        btnAotCurrentTab.disabled = false;
+        btnAotCurrentTab.innerHTML = '✅ 已在小窗打开!';
+        setTimeout(() => { btnAotCurrentTab.innerHTML = origHtml; }, 1500);
+        return;
+      }
+
+      // 在当前标签页的激活上下文中触发置顶
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: activeTabInfo.id },
+        args: [{ preset: currentAotPreset, width: currentAotWidth, height: currentAotHeight, targetUrl: currentUrl }],
+        func: async (opts) => {
+          if (window.__CHROME_ALWAYS_ON_TOP_ENGINE__) {
+            const engine = window.__CHROME_ALWAYS_ON_TOP_ENGINE__;
+            const status = engine.getAotStatus();
+            if (status.active) {
+              engine.closeAlwaysOnTop();
+              return { success: true, action: 'closed' };
+            } else {
+              await engine.openAlwaysOnTop(opts);
+              return { success: true, action: 'opened' };
+            }
+          }
+          return { success: false, fallback: true };
+        }
+      }).catch(() => null);
+
+      const res = results && results[0] && results[0].result;
+      if (!res || res.fallback) {
+        await chrome.runtime.sendMessage({
+          type: 'OPEN_ALWAYS_ON_TOP',
+          tabId: activeTabInfo.id,
+          targetUrl: currentUrl,
+          preset: currentAotPreset,
+          width: currentAotWidth,
+          height: currentAotHeight
+        });
+      }
+
+      btnAotCurrentTab.disabled = false;
+      btnAotCurrentTab.innerHTML = '✅ 操作成功!';
+      setTimeout(() => {
+        btnAotCurrentTab.innerHTML = origHtml;
+        loadAotSettingsAndStatus();
+      }, 500);
+    } catch (err) {
+      btnAotCurrentTab.disabled = false;
+      btnAotCurrentTab.innerHTML = origHtml;
+      console.warn('[AOT Trigger Error]', err);
+      try {
+        await chrome.runtime.sendMessage({
+          type: 'OPEN_ALWAYS_ON_TOP',
+          tabId: activeTabInfo.id,
+          targetUrl: currentUrl,
+          preset: currentAotPreset,
+          width: currentAotWidth,
+          height: currentAotHeight
+        });
+      } catch (e2) {}
+      loadAotSettingsAndStatus();
+    }
+  });
+}
+
+// 绑定链接置顶打开按钮
+if (btnAotOpenUrl && aotTargetUrl) {
+  btnAotOpenUrl.addEventListener('click', async () => {
+    let rawUrl = (aotTargetUrl.value || '').trim();
+    if (!rawUrl) {
+      alert('请输入要置顶打开的网页链接！');
+      aotTargetUrl.focus();
+      return;
+    }
+
+    if (!/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//.test(rawUrl)) {
+      rawUrl = 'https://' + rawUrl;
+    }
+
+    const origText = btnAotOpenUrl.textContent;
+    btnAotOpenUrl.disabled = true;
+    btnAotOpenUrl.textContent = '⏳ 打开中...';
+
+    try {
+      await chrome.runtime.sendMessage({
+        type: 'OPEN_ALWAYS_ON_TOP',
+        targetUrl: rawUrl,
+        preset: currentAotPreset,
+        width: currentAotWidth,
+        height: currentAotHeight
+      });
+
+      btnAotOpenUrl.disabled = false;
+      btnAotOpenUrl.textContent = '✅ 已打开!';
+      setTimeout(() => {
+        btnAotOpenUrl.textContent = origText;
+        if (aotTargetUrl) aotTargetUrl.value = '';
+      }, 1500);
+    } catch (err) {
+      btnAotOpenUrl.disabled = false;
+      btnAotOpenUrl.textContent = origText;
+      alert('打开置顶窗口失败: ' + err.message);
+    }
+  });
+
+  aotTargetUrl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      btnAotOpenUrl.click();
+    }
+  });
+}
+
+if (aotShortcutBtn) {
+  aotShortcutBtn.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'chrome://extensions/shortcuts' });
+  });
+}
+
+if (aotHotkeysCheckbox) {
+  aotHotkeysCheckbox.addEventListener('change', async (e) => {
+    const enabled = Boolean(e.target.checked);
+    await chrome.storage.local.set({ aotHotkeysEnabled: enabled });
+  });
+}
+
+// ==========================================
 // 6.5 视频画中画 (Picture-in-Picture) 控制逻辑
 // ==========================================
 function renderPipStatus(status) {
@@ -2536,6 +2874,7 @@ async function init() {
       await loadGrokData();
       await loadUaSettings();
       await loadWebrtcSettings();
+      await loadAotSettingsAndStatus();
       await loadPipSettingsAndStatus();
       await loadSpeedSettingsAndStatus();
       await loadExtensionList();
@@ -2601,6 +2940,7 @@ async function init() {
       loadGrokData(),
       loadUaSettings(),
       loadWebrtcSettings(),
+      loadAotSettingsAndStatus(),
       loadPipSettingsAndStatus(),
       loadSpeedSettingsAndStatus(),
       loadExtensionList()
