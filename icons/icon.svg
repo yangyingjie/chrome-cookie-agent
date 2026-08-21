@@ -1,46 +1,116 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <defs>
-    <!-- 背景渐变 -->
+    <!-- 1. 背景渐变: 深色黑曜石微光底座 -->
     <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#143c2c" />
-      <stop offset="100%" stop-color="#081812" />
+      <stop offset="0%" stop-color="#0f291e" />
+      <stop offset="50%" stop-color="#081812" />
+      <stop offset="100%" stop-color="#020906" />
     </linearGradient>
 
-    <!-- 盾牌渐变 (WebRTC 安全与隐私防护) -->
+    <!-- 2. 外框翡翠流光描边渐变 -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6ee7b7" stop-opacity="0.9" />
+      <stop offset="40%" stop-color="#34d399" stop-opacity="0.7" />
+      <stop offset="100%" stop-color="#059669" stop-opacity="0.4" />
+    </linearGradient>
+
+    <!-- 3. 盾牌渐变: 晶体翡翠渐变 (WebRTC 安全与数据隐私防护) -->
     <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#34d399" />
-      <stop offset="100%" stop-color="#059669" />
+      <stop offset="35%" stop-color="#10b981" />
+      <stop offset="85%" stop-color="#059669" />
+      <stop offset="100%" stop-color="#047857" />
     </linearGradient>
 
-    <!-- 曲奇金色渐变 (Cookie 与身份令牌) -->
-    <linearGradient id="cookieGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fbbf24" />
-      <stop offset="100%" stop-color="#d97706" />
+    <!-- 4. 盾牌高光面渐变 (3D 水晶切面质感) -->
+    <linearGradient id="shieldHighlight" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45" />
+      <stop offset="60%" stop-color="#a7f3d0" stop-opacity="0.1" />
+      <stop offset="100%" stop-color="#34d399" stop-opacity="0" />
     </linearGradient>
 
-    <!-- 柔和阴影 -->
-    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000" flood-opacity="0.35" />
+    <!-- 5. 曲奇金色渐变: 琥珀金与身份令牌 (Cookie / Grok 账号核心) -->
+    <linearGradient id="cookieGrad" x1="15%" y1="15%" x2="85%" y2="85%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="25%" stop-color="#fbbf24" />
+      <stop offset="70%" stop-color="#d97706" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+
+    <!-- 6. 画中画 / 悬浮小窗 (PiP & Always-On-Top) 青蓝高亮渐变 -->
+    <linearGradient id="pipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+
+    <!-- 7. 科技环流渐变 (Speed / UA / Grok 切换环) -->
+    <linearGradient id="orbitGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a7f3d0" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#ffffff" />
+    </linearGradient>
+
+    <!-- 柔和立体阴影 -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.45" />
+    </filter>
+
+    <!-- 深度外发光 -->
+    <filter id="glowFilter" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
   </defs>
 
-  <!-- 1. Squircle 外框与底色 -->
-  <rect x="6" y="6" width="116" height="116" rx="26" fill="url(#bgGrad)" stroke="#34d399" stroke-width="2.5" stroke-opacity="0.85" filter="url(#dropShadow)" />
+  <!-- 1. Squircle 外框底座 (Apple 连续曲率圆角矩形) -->
+  <rect x="5" y="5" width="118" height="118" rx="28" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="2.2" filter="url(#softShadow)" />
 
-  <!-- 2. 核心晶体盾牌 -->
-  <path d="M 64,28 L 96,38 L 96,62 Q 96,86 64,102 Q 32,86 32,62 L 32,38 Z" fill="url(#shieldGrad)" stroke="#a7f3d0" stroke-width="2" filter="url(#dropShadow)" />
+  <!-- 2. 背景微光科技网格/同心圆微弱底纹 -->
+  <circle cx="64" cy="64" r="44" fill="none" stroke="#10b981" stroke-width="0.75" stroke-dasharray="3 5" opacity="0.2" />
 
-  <!-- 3. 金色科技曲奇饼 -->
-  <circle cx="64" cy="58" r="19" fill="url(#cookieGrad)" stroke="#fef3c7" stroke-width="1.8" />
+  <!-- 3. 极速与数据流转外环光弧 (象征 UA 切换 / 媒体倍速) -->
+  <path d="M 28,48 A 42 42 0 0 1 82,22" fill="none" stroke="url(#orbitGrad)" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="28 10" opacity="0.85" />
+  <path d="M 100,80 A 42 42 0 0 1 46,106" fill="none" stroke="url(#orbitGrad)" stroke-width="2.8" stroke-linecap="round" stroke-dasharray="28 10" opacity="0.85" />
 
-  <!-- 4. 巧克力芯片与科技节点 -->
-  <circle cx="56" cy="49" r="3.2" fill="#78350f" />
-  <circle cx="72" cy="52" r="3.5" fill="#78350f" />
-  <circle cx="61" cy="61" r="3.8" fill="#78350f" />
-  <circle cx="53" cy="66" r="3" fill="#78350f" />
-  <circle cx="73" cy="65" r="3.2" fill="#78350f" />
+  <!-- 4. 核心晶体安全盾牌 (象征 WebRTC 防泄露与全能安全基座) -->
+  <path d="M 64,26 L 96,37 L 96,63 C 96,87 64,103 64,103 C 64,103 32,87 32,63 L 32,37 Z" fill="url(#shieldGrad)" stroke="#a7f3d0" stroke-width="1.8" filter="url(#softShadow)" />
 
-  <!-- 5. 双向科技切换光环 (User-Agent 切换) -->
-  <path d="M 36,46 A 34 34 0 0 1 76,26" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-dasharray="24 8" opacity="0.9" />
-  <path d="M 92,82 A 34 34 0 0 1 52,102" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-dasharray="24 8" opacity="0.9" />
+  <!-- 5. 盾牌左上方立体晶面高光 -->
+  <path d="M 64,27 L 34,37.5 L 34,62.5 C 34,74 46,86 64,96 L 64,27 Z" fill="url(#shieldHighlight)" />
+
+  <!-- 6. 核心琥珀金科技曲奇 (Cookie 令牌 & Grok 账号助手) -->
+  <circle cx="64" cy="61" r="18.5" fill="url(#cookieGrad)" stroke="#fef9c3" stroke-width="1.6" filter="url(#softShadow)" />
+
+  <!-- 曲奇微光高光弧 -->
+  <path d="M 50,54 A 15.5 15.5 0 0 1 78,54" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.6" />
+
+  <!-- 巧克力芯片 / 算力节点 (高对比度带立体暗调与微高光) -->
+  <circle cx="56" cy="53" r="2.8" fill="#581c87" opacity="0" /> <!-- spacer -->
+  <circle cx="56.5" cy="52.5" r="2.8" fill="#451a03" />
+  <circle cx="55.8" cy="51.8" r="0.9" fill="#fde68a" opacity="0.8" />
+
+  <circle cx="72.5" cy="55.5" r="3.1" fill="#451a03" />
+  <circle cx="71.8" cy="54.7" r="1.0" fill="#fde68a" opacity="0.8" />
+
+  <circle cx="61.5" cy="64" r="3.3" fill="#451a03" />
+  <circle cx="60.6" cy="63.1" r="1.1" fill="#fde68a" opacity="0.8" />
+
+  <circle cx="53" cy="68.5" r="2.6" fill="#451a03" />
+  <circle cx="52.3" cy="67.8" r="0.8" fill="#fde68a" opacity="0.8" />
+
+  <circle cx="72.5" cy="68" r="2.8" fill="#451a03" />
+  <circle cx="71.8" cy="67.2" r="0.9" fill="#fde68a" opacity="0.8" />
+
+  <!-- 7. 右上角悬浮置顶小窗 / PiP 徽标 (Picture-in-Picture & Always-On-Top) -->
+  <g transform="translate(80, 22)" filter="url(#softShadow)">
+    <!-- 浮窗背板 (高透极客青蓝) -->
+    <rect x="0" y="0" width="26" height="19" rx="4.5" fill="url(#pipGrad)" stroke="#e0f2fe" stroke-width="1.4" />
+    <!-- 浮窗标题栏/小指示灯 -->
+    <rect x="0" y="0" width="26" height="5" rx="4.5" fill="#0369a1" />
+    <circle cx="4" cy="2.5" r="1" fill="#38bdf8" />
+    <circle cx="7.5" cy="2.5" r="1" fill="#a7f3d0" />
+    <!-- 浮窗内部画中画箭头/置顶小窗口标识 -->
+    <polygon points="10,13 18,13 18,8" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" />
+    <line x1="12" y1="14" x2="18" y2="8" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" />
+  </g>
 </svg>
