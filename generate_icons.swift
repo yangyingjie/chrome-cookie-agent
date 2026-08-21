@@ -15,7 +15,7 @@ func createLinearGradient(colors: [CGColor], locations: [CGFloat]) -> CGGradient
     return CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: locations)!
 }
 
-func drawSquircle(ctx: CGContext, rect: CGRect, radius: CGFloat) -> CGPath {
+func drawSquircle(rect: CGRect, radius: CGFloat) -> CGPath {
     let path = CGMutablePath()
     let x = rect.origin.x
     let y = rect.origin.y
@@ -32,6 +32,28 @@ func drawSquircle(ctx: CGContext, rect: CGRect, radius: CGFloat) -> CGPath {
     path.addArc(tangent1End: CGPoint(x: x, y: y + h), tangent2End: CGPoint(x: x, y: y + h - r), radius: r)
     path.addLine(to: CGPoint(x: x, y: y + r))
     path.addArc(tangent1End: CGPoint(x: x, y: y), tangent2End: CGPoint(x: x + r, y: y), radius: r)
+    path.closeSubpath()
+    return path
+}
+
+func createCookiePath(cx: CGFloat, cy: CGFloat, r: CGFloat) -> CGPath {
+    let path = CGMutablePath()
+    
+    // Top-down coordinates:
+    // Start at top: (cx, cy - r)
+    let pTop = CGPoint(x: cx, y: cy - r)
+    
+    // Arc around left and bottom: from top (1.5 pi) -> left (1.0 pi) -> bottom (0.5 pi) -> right (0 pi)
+    path.addArc(center: CGPoint(x: cx, y: cy), radius: r, startAngle: CGFloat.pi * 1.5, endAngle: 0, clockwise: true)
+    
+    // Dual bite inward curve from right (cx+r, cy) back to top (cx, cy-r)
+    let bite1Inner = CGPoint(x: cx + r * 0.58, y: cy - r * 0.45)
+    let ctrl1 = CGPoint(x: cx + r * 0.78, y: cy - r * 0.02)
+    path.addQuadCurve(to: bite1Inner, control: ctrl1)
+    
+    let ctrl2 = CGPoint(x: cx + r * 0.28, y: cy - r * 0.95)
+    path.addQuadCurve(to: pTop, control: ctrl2)
+    
     path.closeSubpath()
     return path
 }
@@ -59,279 +81,138 @@ func renderIcon(size: Int, outputPath: URL) {
     ctx.setAllowsAntialiasing(true)
     ctx.interpolationQuality = .high
     
-    // Scale coordinate system to virtual size (size x size) with flipped Y for natural top-down coordinates
+    // Top-down coordinates
     ctx.scaleBy(x: scale, y: -scale)
     ctx.translateBy(x: 0, y: -CGFloat(size))
     
     let S = CGFloat(size)
+    let cx = S * 0.5
+    let cy = S * 0.5
     
     // --- 1. Base Squircle & Background ---
-    let pad = S * 0.04
+    let pad = S * 0.05
     let baseRect = CGRect(x: pad, y: pad, width: S - 2 * pad, height: S - 2 * pad)
-    let cornerRadius = S * 0.22
-    let baseSquircle = drawSquircle(ctx: ctx, rect: baseRect, radius: cornerRadius)
+    let cornerRadius = S * 0.23
+    let baseSquircle = drawSquircle(rect: baseRect, radius: cornerRadius)
     
     ctx.saveGState()
     if size >= 48 {
         ctx.setShadow(offset: CGSize(width: 0, height: S * 0.03), blur: S * 0.04, color: color(0, 0, 0, 0.45))
     }
-    
     ctx.addPath(baseSquircle)
     ctx.clip()
     
-    // Background gradient: Obsidian emerald dark
+    // Background: Deep Obsidian Emerald (#064e3b -> #022c22 -> #01140e)
     let bgGrad = createLinearGradient(
-        colors: [color(16, 42, 32), color(8, 24, 18), color(2, 9, 6)],
+        colors: [color(6, 78, 59), color(2, 44, 34), color(1, 20, 14)],
         locations: [0.0, 0.55, 1.0]
     )
     ctx.drawLinearGradient(bgGrad, start: CGPoint(x: pad, y: pad), end: CGPoint(x: S - pad, y: S - pad), options: [])
     ctx.restoreGState()
     
-    // Base outer border glow
+    // Squircle Outer Subtle Emerald Border
     ctx.saveGState()
     ctx.addPath(baseSquircle)
     let borderGrad = createLinearGradient(
-        colors: [color(110, 231, 183, 0.95), color(52, 211, 153, 0.8), color(5, 150, 105, 0.5)],
-        locations: [0.0, 0.45, 1.0]
+        colors: [color(52, 211, 153, 0.9), color(16, 185, 129, 0.7), color(5, 150, 105, 0.35)],
+        locations: [0.0, 0.5, 1.0]
     )
-    ctx.setLineWidth(max(1.0, S * 0.025))
+    ctx.setLineWidth(max(1.0, S * (size <= 16 ? 0.06 : 0.024)))
     ctx.replacePathWithStrokedPath()
     ctx.clip()
     ctx.drawLinearGradient(borderGrad, start: CGPoint(x: pad, y: pad), end: CGPoint(x: S - pad, y: S - pad), options: [])
     ctx.restoreGState()
     
-    // --- 2. Dual Speed / UA / Switching Orbital Arcs (for size >= 32) ---
-    if size >= 32 {
-        ctx.saveGState()
-        let arcLineWidth = max(1.2, S * 0.028)
-        ctx.setLineWidth(arcLineWidth)
-        ctx.setLineCap(.round)
-        
-        let cx = S * 0.5
-        let cy = S * 0.5
-        let orbitR = S * 0.38
-        
-        // Top-left arc
-        let arc1 = CGMutablePath()
-        arc1.addArc(center: CGPoint(x: cx, y: cy), radius: orbitR, startAngle: CGFloat.pi * 1.05, endAngle: CGFloat.pi * 1.55, clockwise: false)
-        ctx.addPath(arc1)
-        ctx.setStrokeColor(color(56, 189, 248, 0.85))
-        ctx.strokePath()
-        
-        // Bottom-right arc
-        let arc2 = CGMutablePath()
-        arc2.addArc(center: CGPoint(x: cx, y: cy), radius: orbitR, startAngle: CGFloat.pi * 0.05, endAngle: CGFloat.pi * 0.55, clockwise: false)
-        ctx.addPath(arc2)
-        ctx.setStrokeColor(color(52, 211, 153, 0.85))
-        ctx.strokePath()
-        ctx.restoreGState()
-    }
+    // --- 2. Minimalist Golden Amber Cookie ---
+    let cookieR = S * (size <= 16 ? 0.33 : (size <= 32 ? 0.31 : 0.30))
+    let cookieShiftY = S * 0.015 // slight visual center balance
+    let cookiePath = createCookiePath(cx: cx, cy: cy + cookieShiftY, r: cookieR)
     
-    // --- 3. Emerald Crystal Shield ---
     ctx.saveGState()
-    let cx = S * 0.5
-    let shieldTop = S * (size <= 16 ? 0.16 : 0.20)
-    let shieldBottom = S * (size <= 16 ? 0.86 : 0.84)
-    let shieldLeft = S * (size <= 16 ? 0.20 : 0.24)
-    let shieldRight = S * (size <= 16 ? 0.80 : 0.76)
-    let shieldShoulderY = shieldTop + (shieldBottom - shieldTop) * 0.22
-    
-    let shieldPath = CGMutablePath()
-    shieldPath.move(to: CGPoint(x: cx, y: shieldTop))
-    shieldPath.addLine(to: CGPoint(x: shieldRight, y: shieldShoulderY))
-    shieldPath.addLine(to: CGPoint(x: shieldRight, y: shieldTop + (shieldBottom - shieldTop) * 0.52))
-    shieldPath.addQuadCurve(to: CGPoint(x: cx, y: shieldBottom), control: CGPoint(x: shieldRight, y: shieldBottom - S * 0.04))
-    shieldPath.addQuadCurve(to: CGPoint(x: shieldLeft, y: shieldTop + (shieldBottom - shieldTop) * 0.52), control: CGPoint(x: shieldLeft, y: shieldBottom - S * 0.04))
-    shieldPath.addLine(to: CGPoint(x: shieldLeft, y: shieldShoulderY))
-    shieldPath.closeSubpath()
-    
     if size >= 48 {
-        ctx.setShadow(offset: CGSize(width: 0, height: S * 0.02), blur: S * 0.03, color: color(0, 0, 0, 0.4))
+        ctx.setShadow(offset: CGSize(width: 0, height: S * 0.025), blur: S * 0.035, color: color(0, 0, 0, 0.4))
     }
-    
-    ctx.addPath(shieldPath)
+    ctx.addPath(cookiePath)
     ctx.clip()
     
-    // Shield emerald gradient
-    let shieldGrad = createLinearGradient(
-        colors: [color(52, 211, 153), color(16, 185, 129), color(5, 150, 105), color(4, 120, 87)],
-        locations: [0.0, 0.35, 0.85, 1.0]
-    )
-    ctx.drawLinearGradient(shieldGrad, start: CGPoint(x: cx, y: shieldTop), end: CGPoint(x: cx, y: shieldBottom), options: [])
-    
-    // Shield facet highlight (left 3D facet)
-    let facetPath = CGMutablePath()
-    facetPath.move(to: CGPoint(x: cx, y: shieldTop))
-    facetPath.addLine(to: CGPoint(x: shieldLeft, y: shieldShoulderY))
-    facetPath.addLine(to: CGPoint(x: shieldLeft, y: shieldTop + (shieldBottom - shieldTop) * 0.52))
-    facetPath.addQuadCurve(to: CGPoint(x: cx, y: shieldBottom), control: CGPoint(x: shieldLeft, y: shieldBottom - S * 0.04))
-    facetPath.closeSubpath()
-    
-    let facetGrad = createLinearGradient(
-        colors: [color(255, 255, 255, 0.38), color(167, 243, 208, 0.12), color(52, 211, 153, 0.0)],
-        locations: [0.0, 0.5, 1.0]
-    )
-    ctx.addPath(facetPath)
-    ctx.clip()
-    ctx.drawLinearGradient(facetGrad, start: CGPoint(x: shieldLeft, y: shieldTop), end: CGPoint(x: cx, y: shieldBottom), options: [])
-    ctx.restoreGState()
-    
-    // Shield stroke outline
-    ctx.saveGState()
-    ctx.addPath(shieldPath)
-    ctx.setStrokeColor(color(167, 243, 208, 0.95))
-    ctx.setLineWidth(max(1.0, S * (size <= 16 ? 0.07 : 0.024)))
-    ctx.strokePath()
-    ctx.restoreGState()
-    
-    // --- 4. Golden Amber Cyber Cookie (Token Core) ---
-    ctx.saveGState()
-    let cookieCy = shieldTop + (shieldBottom - shieldTop) * 0.48
-    let cookieR = S * (size <= 16 ? 0.20 : 0.17)
-    let cookieRect = CGRect(x: cx - cookieR, y: cookieCy - cookieR, width: cookieR * 2, height: cookieR * 2)
-    
-    if size >= 48 {
-        ctx.setShadow(offset: CGSize(width: 0, height: S * 0.02), blur: S * 0.025, color: color(0, 0, 0, 0.35))
-    }
-    
+    // Cookie Amber Gold Gradient
     let cookieGrad = createLinearGradient(
         colors: [color(254, 240, 138), color(251, 191, 36), color(217, 119, 6), color(180, 83, 9)],
         locations: [0.0, 0.25, 0.75, 1.0]
     )
-    ctx.addEllipse(in: cookieRect)
-    ctx.clip()
-    ctx.drawLinearGradient(cookieGrad, start: CGPoint(x: cookieRect.minX + cookieR * 0.3, y: cookieRect.minY + cookieR * 0.3), end: CGPoint(x: cookieRect.maxX, y: cookieRect.maxY), options: [])
+    ctx.drawLinearGradient(
+        cookieGrad,
+        start: CGPoint(x: cx - cookieR * 0.6, y: cy - cookieR * 0.6 + cookieShiftY),
+        end: CGPoint(x: cx + cookieR * 0.8, y: cy + cookieR * 0.8 + cookieShiftY),
+        options: []
+    )
     ctx.restoreGState()
     
-    // Cookie rim stroke
+    // Cookie Highlight Arc (size >= 32)
+    if size >= 32 {
+        ctx.saveGState()
+        let hlPath = CGMutablePath()
+        hlPath.addArc(center: CGPoint(x: cx, y: cy + cookieShiftY), radius: cookieR * 0.82, startAngle: CGFloat.pi * 1.15, endAngle: CGFloat.pi * 1.45, clockwise: false)
+        ctx.addPath(hlPath)
+        ctx.setStrokeColor(color(255, 255, 255, 0.65))
+        ctx.setLineWidth(max(1.0, S * 0.02))
+        ctx.setLineCap(.round)
+        ctx.strokePath()
+        ctx.restoreGState()
+    }
+    
+    // Cookie Outline / Highlight Stroke
     ctx.saveGState()
-    ctx.addEllipse(in: cookieRect)
+    ctx.addPath(cookiePath)
     ctx.setStrokeColor(color(254, 249, 195, 0.95))
     ctx.setLineWidth(max(1.0, S * (size <= 16 ? 0.06 : 0.022)))
     ctx.strokePath()
     ctx.restoreGState()
     
-    // Chocolate / Semiconductor Chips
+    // --- 3. Clean Chocolate Chips (3 balanced chips) ---
     ctx.saveGState()
-    let chipColor = color(69, 26, 3, 0.95)
-    let chipHighlight = color(253, 230, 138, 0.8)
+    let chipColor = color(59, 18, 4, 0.95)
+    let chipHighlight = color(253, 230, 138, 0.85)
     
-    let chipOffsets: [(dx: CGFloat, dy: CGFloat, r: CGFloat)]
+    let chips: [(dx: CGFloat, dy: CGFloat, r: CGFloat)]
     if size <= 16 {
-        chipOffsets = [
-            (-0.35, -0.3, 0.22),
-            (0.35, -0.2, 0.22),
-            (0.0, 0.25, 0.24)
-        ]
-    } else if size <= 32 {
-        chipOffsets = [
-            (-0.38, -0.35, 0.18),
-            (0.38, -0.22, 0.20),
-            (-0.1, 0.1, 0.22),
-            (-0.4, 0.38, 0.16),
-            (0.38, 0.35, 0.18)
+        chips = [
+            (-0.35, -0.25, 0.22),
+            (0.18, 0.32, 0.22),
+            (-0.25, 0.35, 0.20)
         ]
     } else {
-        chipOffsets = [
-            (-0.40, -0.42, 0.16),
-            (0.42, -0.28, 0.17),
-            (-0.12, 0.12, 0.18),
-            (-0.45, 0.40, 0.15),
-            (0.42, 0.38, 0.16)
+        chips = [
+            (-0.34, -0.28, 0.19),
+            (0.18, 0.32, 0.19),
+            (-0.28, 0.35, 0.17)
         ]
     }
     
-    for chip in chipOffsets {
+    for chip in chips {
         let chx = cx + chip.dx * cookieR
-        let chy = cookieCy + chip.dy * cookieR
+        let chy = cy + cookieShiftY + chip.dy * cookieR
         let chr = chip.r * cookieR
         let chipRect = CGRect(x: chx - chr, y: chy - chr, width: chr * 2, height: chr * 2)
+        
         ctx.setFillColor(chipColor)
         ctx.fillEllipse(in: chipRect)
         
         if size >= 32 {
             let hlr = chr * 0.35
-            let hlRect = CGRect(x: chx - chr * 0.4, y: chy - chr * 0.4, width: hlr * 2, height: hlr * 2)
+            let hlRect = CGRect(x: chx - chr * 0.35, y: chy - chr * 0.35, width: hlr * 2, height: hlr * 2)
             ctx.setFillColor(chipHighlight)
             ctx.fillEllipse(in: hlRect)
         }
     }
     ctx.restoreGState()
     
-    // --- 5. Picture-in-Picture / Always-On-Top Mini Window Badge (in upper right) ---
-    ctx.saveGState()
-    let pipW = S * (size <= 16 ? 0.38 : (size <= 32 ? 0.32 : 0.26))
-    let pipH = pipW * 0.72
-    let pipX = S * (size <= 16 ? 0.58 : (size <= 32 ? 0.62 : 0.65))
-    let pipY = S * (size <= 16 ? 0.10 : (size <= 32 ? 0.14 : 0.16))
-    let pipRect = CGRect(x: pipX, y: pipY, width: pipW, height: pipH)
-    let pipRadius = max(1.5, pipW * 0.2)
-    let pipPath = drawSquircle(ctx: ctx, rect: pipRect, radius: pipRadius)
-    
-    if size >= 48 {
-        ctx.setShadow(offset: CGSize(width: 0, height: S * 0.02), blur: S * 0.03, color: color(0, 0, 0, 0.45))
-    }
-    
-    // PiP body gradient: Cyan tech
-    let pipGrad = createLinearGradient(
-        colors: [color(56, 189, 248), color(2, 132, 199)],
-        locations: [0.0, 1.0]
-    )
-    ctx.addPath(pipPath)
-    ctx.clip()
-    ctx.drawLinearGradient(pipGrad, start: CGPoint(x: pipX, y: pipY), end: CGPoint(x: pipX + pipW, y: pipY + pipH), options: [])
-    
-    // PiP top bar
-    let headerH = pipH * 0.32
-    ctx.setFillColor(color(3, 105, 161))
-    ctx.fill(CGRect(x: pipX, y: pipY, width: pipW, height: headerH))
-    
-    if size >= 48 {
-        // Dot lights
-        ctx.setFillColor(color(56, 189, 248))
-        ctx.fillEllipse(in: CGRect(x: pipX + pipW * 0.15, y: pipY + headerH * 0.3, width: headerH * 0.4, height: headerH * 0.4))
-        ctx.setFillColor(color(167, 243, 208))
-        ctx.fillEllipse(in: CGRect(x: pipX + pipW * 0.32, y: pipY + headerH * 0.3, width: headerH * 0.4, height: headerH * 0.4))
-    }
-    ctx.restoreGState()
-    
-    // PiP outline stroke
-    ctx.saveGState()
-    ctx.addPath(pipPath)
-    ctx.setStrokeColor(color(224, 242, 254, 0.95))
-    ctx.setLineWidth(max(1.0, S * (size <= 16 ? 0.06 : 0.02)))
-    ctx.strokePath()
-    
-    // PiP arrow symbol
-    if size >= 32 {
-        let arrowPath = CGMutablePath()
-        let ax = pipX + pipW * 0.48
-        let ay = pipY + headerH + (pipH - headerH) * 0.18
-        let aw = pipW * 0.38
-        let ah = (pipH - headerH) * 0.65
-        
-        arrowPath.move(to: CGPoint(x: ax, y: ay + ah))
-        arrowPath.addLine(to: CGPoint(x: ax + aw, y: ay + ah))
-        arrowPath.addLine(to: CGPoint(x: ax + aw, y: ay))
-        arrowPath.move(to: CGPoint(x: ax + aw, y: ay))
-        arrowPath.addLine(to: CGPoint(x: ax + aw * 0.3, y: ay + ah * 0.7))
-        
-        ctx.addPath(arrowPath)
-        ctx.setStrokeColor(color(255, 255, 255, 0.95))
-        ctx.setLineWidth(max(1.0, S * 0.02))
-        ctx.setLineCap(.round)
-        ctx.setLineJoin(.round)
-        ctx.strokePath()
-    }
-    ctx.restoreGState()
-    
-    // --- 6. Export to PNG ---
+    // --- 4. Export to PNG ---
     guard let image = ctx.makeImage() else {
         print("Failed to make CGImage for size \(size)")
         return
     }
     
-    // Create final scaled image representation
     let finalRep = NSBitmapImageRep(
         bitmapDataPlanes: nil,
         pixelsWide: size,
@@ -359,7 +240,7 @@ func renderIcon(size: Int, outputPath: URL) {
     
     do {
         try pngData.write(to: outputPath)
-        print("Successfully created pixel-optimized \(size)x\(size) PNG (\(pngData.count) bytes) -> \(outputPath.lastPathComponent)")
+        print("Successfully created minimalist \(size)x\(size) PNG (\(pngData.count) bytes) -> \(outputPath.lastPathComponent)")
     } catch {
         print("Failed to write to \(outputPath.path): \(error)")
     }
@@ -371,4 +252,4 @@ for s in sizes {
     renderIcon(size: s, outputPath: outUrl)
 }
 
-print("All pixel-optimized icons generated successfully!")
+print("All minimalist icons generated successfully!")
